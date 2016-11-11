@@ -8,7 +8,7 @@
 
 #include <ppapi/c/ppb_core.h>
 
-#include "impl/PPB_MessageLoop.h"
+#include "PPB_MessageLoop.h"
 
 #include "log.h"
 

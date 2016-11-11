@@ -12,7 +12,7 @@
 #include "log.h"
 #include "res.h"
 #include "instance.h"
-#include "impl/PPB_Var.h"
+#include "PPB_Var.h"
 
 #include "uriparser/Uri.h"
 

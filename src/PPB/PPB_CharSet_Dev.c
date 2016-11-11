@@ -12,8 +12,8 @@
 #include <ppapi/c/dev/ppb_char_set_dev.h>
 
 #include "log.h"
-#include "impl/PPB_Var.h"
-#include "impl/PPB_Memory_Dev.h"
+#include "PPB_Var.h"
+#include "PPB_Memory_Dev.h"
 
 // Converts the UTF-16 string pointed to in |*utf16| to an 8-bit string in the
 // specified code page. |utf16_len| is measured in UTF-16 units, not bytes.

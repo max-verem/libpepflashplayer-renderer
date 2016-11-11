@@ -13,7 +13,7 @@
 #include "log.h"
 #include "res.h"
 
-#include "impl/PPB_Var.h"
+#include "PPB_Var.h"
 
 typedef struct ppb_var_deprecated_desc
 {

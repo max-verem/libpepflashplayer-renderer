@@ -12,7 +12,7 @@
 
 #include <ppapi/c/ppb_message_loop.h>
 
-#include "impl/PPB_MessageLoop.h"
+#include "PPB_MessageLoop.h"
 
 #define SWF "demo.swf"
 const char* so_name = "/usr/local/src/2016-10-28/libpepflashplayer.so";

@@ -4,7 +4,7 @@ AM_LDFLAGS = -lm
 INCLUDES = \
     @PPAPI_CFLAGS@ \
     -I$(top_srcdir)/src/pepper_obsolete \
-    -I$(top_srcdir)/src \
+    -I$(top_srcdir)/src/PPB \
     -I$(top_srcdir)/src/common
 
 bin_PROGRAMS = tracer

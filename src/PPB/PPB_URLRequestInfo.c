@@ -12,7 +12,7 @@
 
 #include "log.h"
 #include "res.h"
-#include "impl/PPB_Var.h"
+#include "PPB_Var.h"
 
 #define MAX_PROPS (PP_URLREQUESTPROPERTY_CUSTOMUSERAGENT + 1)
 

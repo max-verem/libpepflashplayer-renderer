@@ -11,7 +11,7 @@
 
 #include "log.h"
 
-#include "impl/PPB_Var.h"
+#include "PPB_Var.h"
 
 /**
  * GetWindowObject is a pointer to a function that determines

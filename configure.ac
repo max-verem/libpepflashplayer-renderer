@@ -1,3 +1,7 @@
+dnl
+dnl autoreconf --force --install ; ./configure ; make
+dnl
+
 AC_INIT(configure.ac)
 AM_INIT_AUTOMAKE(libpepflashplayer-renderer, 0.1)
 AM_CONFIG_HEADER(config.h)
@@ -14,8 +18,10 @@ AC_PROG_CXX
 AC_CHECK_FUNCS(localtime_r)
 
 LIBDEP=""
-AC_CHECK_LIB(pthread, pthread_create, [LIBDEP+=-lpthread])
 AC_SUBST(LIBDEP)
+
+AC_CHECK_LIB([pthread], [pthread_create])
+AC_CHECK_LIB([dl], [dlopen])
 
 AM_CONDITIONAL([WIN32], [test x$win32 = xtrue])
 
@@ -33,7 +39,7 @@ AC_ARG_WITH([pepper],
         [PEPPER_PATH=/usr/local/nacl_sdk/pepper_49])
 AC_SUBST(PEPPER_PATH)
 
-PPAPI_CFLAGS="$PEPPER_PATH/include"
+PPAPI_CFLAGS="-I$PEPPER_PATH/include"
 AC_SUBST(PPAPI_CFLAGS)
 
 AM_PATH_XML2(2.4.0)

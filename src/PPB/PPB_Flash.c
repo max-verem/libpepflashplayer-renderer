@@ -10,7 +10,7 @@
 
 #include <ppapi/c/private/ppb_flash.h>
 
-#include "impl/PPB_Var.h"
+#include "PPB_Var.h"
 #include "log.h"
 
 
