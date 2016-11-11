@@ -17,7 +17,7 @@ tracer_SOURCES = \
 
 #$(top_srcdir)/src/PPB/libPPB.a:
 
-SUBDIRS = $(top_srcdir)/src/PPB
+SUBDIRS = ../PPB
 
 tracer_LDADD = \
     $(top_srcdir)/src/PPB/libPPB.a \
