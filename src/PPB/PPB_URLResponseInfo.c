@@ -10,6 +10,10 @@
 #include <ppapi/c/ppb_url_response_info.h>
 
 #include "log.h"
+#include "res.h"
+
+#include "PPB_URLLoader.h"
+#include "PPB_Var.h"
 
 /**
  * IsURLResponseInfo() determines if a response is a
@@ -24,8 +28,8 @@
  */
 static PP_Bool IsURLResponseInfo(PP_Resource resource)
 {
-    LOG_NP;
-    return 0;
+    LOG_TD;
+    return 1;
 };
 
 
@@ -42,8 +46,46 @@ static PP_Bool IsURLResponseInfo(PP_Resource resource)
  */
 static struct PP_Var GetProperty(PP_Resource response, PP_URLResponseProperty property)
 {
-    LOG_NP;
-    return PP_MakeInt32(0);
+    static const char* property_names[] =
+    {
+        "URL",
+        "REDIRECTURL",
+        "REDIRECTMETHOD",
+        "STATUSCODE",
+        "STATUSLINE",
+        "HEADERS",
+        NULL
+    };
+
+    url_loader_t* url_loader = (url_loader_t*)res_private(response);
+
+    LOG("property_name=[%s]", property_names[property]);
+
+    switch(property)
+    {
+        case PP_URLRESPONSEPROPERTY_URL:
+            return url_loader->url_request_info->props[PP_URLREQUESTPROPERTY_URL];
+
+        case PP_URLRESPONSEPROPERTY_REDIRECTURL:
+            LOG_NP;
+            break;
+
+        case PP_URLRESPONSEPROPERTY_REDIRECTMETHOD:
+            LOG_NP;
+            break;
+
+        case PP_URLRESPONSEPROPERTY_STATUSCODE:
+            return url_loader->response.STATUSCODE;
+
+        case PP_URLRESPONSEPROPERTY_STATUSLINE:
+            LOG_NP;
+            break;
+
+        case PP_URLRESPONSEPROPERTY_HEADERS:
+            return url_loader->response.HEADERS;
+    }
+
+    return PP_MakeUndefined();
 };
 
 

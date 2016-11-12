@@ -123,7 +123,7 @@ int res_add_ref(PP_Resource res)
     pthread_mutex_lock(&lock);
 
     if(res < active.count && active.list[res])
-        r = active.list[res]->ref++;
+        r = ++active.list[res]->ref;
 
     pthread_mutex_unlock(&lock);
 

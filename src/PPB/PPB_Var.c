@@ -134,7 +134,7 @@ const char* VarToUtf8(struct PP_Var var, uint32_t* len)
     if(len)
         *len = res_private_size(var.value.as_id) - 1;
 
-    LOG("r=[%s], *len=%d, strlen=%zd", r, *len, strlen(r));
+    LOG("r=[%s], *len=%d, strlen=%zd", r, (len)?(*len):0, strlen(r));
 
     return r;
 };

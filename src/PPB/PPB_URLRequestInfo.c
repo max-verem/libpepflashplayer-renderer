@@ -13,20 +13,33 @@
 #include "log.h"
 #include "res.h"
 #include "PPB_Var.h"
+#include "PPB_URLRequestInfo.h"
 
-#define MAX_PROPS (PP_URLREQUESTPROPERTY_CUSTOMUSERAGENT + 1)
-
-typedef struct url_request_info_desc
+static const char* URLRequestProperties[PP_URLREQUESTPROPERTY_LAST] =
 {
-    PP_Instance instance_id;
-    struct PP_Var props[MAX_PROPS];
-} url_request_info_t;
+    "URL",
+    "METHOD",
+    "HEADERS",
+    "STREAMTOFILE",
+    "FOLLOWREDIRECTS",
+    "RECORDDOWNLOADPROGRESS",
+    "RECORDUPLOADPROGRESS",
+    "CUSTOMREFERRERURL",
+    "ALLOWCROSSORIGINREQUESTS",
+    "ALLOWCREDENTIALS",
+    "CUSTOMCONTENTTRANSFERENCODING",
+    "PREFETCHBUFFERUPPERTHRESHOLD",
+    "PREFETCHBUFFERLOWERTHRESHOLD",
+    "CUSTOMUSERAGENT",
+};
 
 static void Destructor(url_request_info_t* url_req)
 {
     int i;
 
-    for(i = 0; i < MAX_PROPS; i++)
+    LOG("");
+
+    for(i = 0; i < PP_URLREQUESTPROPERTY_LAST; i++)
         if(url_req->props[i].type != PP_VARTYPE_UNDEFINED)
             PPB_Var_Release(url_req->props[i]);
 };
@@ -96,7 +109,19 @@ static PP_Bool SetProperty(PP_Resource request,
 
     url_req->props[property] = value;
 
-    LOG("property=%d", property);
+    LOG("{%d} property=%s", request, URLRequestProperties[property]);
+    if(value.type == PP_VARTYPE_STRING)
+    {
+        LOG("{%d} value=[%s]", request, (char*)res_private(value.value.as_id));
+    }
+    else if(value.type == PP_VARTYPE_INT32)
+    {
+        LOG("{%d} value=%d", request, value.value.as_int);
+    }
+    else if(value.type == PP_VARTYPE_BOOL)
+    {
+        LOG("{%d} value=%s", request, value.value.as_bool ? "TRUE" : "FALSE");
+    };
 
     return 0;
 };

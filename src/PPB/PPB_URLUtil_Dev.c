@@ -14,9 +14,9 @@
 #include "instance.h"
 #include "PPB_Var.h"
 
-#include "uriparser/Uri.h"
+#include <uriparser/Uri.h>
 
-static void uriparser_parse(char* url, struct PP_URLComponents_Dev* comp)
+void uriparser_parse(const char* url, struct PP_URLComponents_Dev* comp)
 {
     int r;
     UriUriA uri;
@@ -114,12 +114,12 @@ static void uriparser_parse(char* url, struct PP_URLComponents_Dev* comp)
     LOG("uri.pathHead->text.first=%p, uri.pathTail->text.afterLast=%p", uri.pathHead->text.first, uri.pathTail->text.afterLast);
     if(uri.pathHead && (uri.pathHead->text.first != uri.pathHead->text.afterLast))
     {
-        comp->path.begin = uri.pathHead->text.first - url -1 ;
+        comp->path.begin = uri.pathHead->text.first - url - 1 ;
 
         if(uri.pathTail && (uri.pathTail->text.first != uri.pathTail->text.afterLast))
-            comp->path.len = uri.pathTail->text.afterLast - uri.pathHead->text.first;
+            comp->path.len = uri.pathTail->text.afterLast - uri.pathHead->text.first + 1;
         else
-            comp->path.len = strlen(url) - comp->path.begin;
+            comp->path.len = strlen(url) - comp->path.begin + 1;
     }
     else
         comp->path = und;
@@ -130,6 +130,10 @@ static void uriparser_parse(char* url, struct PP_URLComponents_Dev* comp)
     uriFreeUriMembersA(&uri);
 };
 
+void uriparser_parse_var(struct PP_Var url, struct PP_URLComponents_Dev* comp)
+{
+    uriparser_parse(VarToUtf8(url, NULL), comp);
+};
 
 /*
  * Canonicalizes the given URL string according to the rules of the host

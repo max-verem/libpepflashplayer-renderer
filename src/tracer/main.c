@@ -15,9 +15,9 @@
 #include "PPB_MessageLoop.h"
 
 #define SWF "demo.swf"
-const char* so_name = "/usr/local/src/2016-10-28/libpepflashplayer.so";
-const char* so_path = "/usr/local/src/2016-10-28/demos/.Local";
-const char* swf_path = "file:///usr/local/src/2016-10-28/demos";
+const char* so_name = "/tmp/flash/libpepflashplayer.so";
+const char* local_path = "/tmp/flash/local";
+const char* swf_path = "file:///tmp/flash/src";
 const char* swf_name = SWF;
 
 const char* argn[] = { "src", "quality", "bgcolor", "width", "height", NULL};
@@ -44,7 +44,7 @@ LOG("instance_id=%d", instance_id);
     inst->instance_id = instance_id;
 
     /* setup arguments */
-    strncpy(inst->paths.Local, so_path, PATH_MAX);
+    strncpy(inst->paths.Local, local_path, PATH_MAX);
     strncpy(inst->paths.DocumentURL, swf_path, PATH_MAX);
     strncpy(inst->paths.PluginInstanceURL, swf_path, PATH_MAX);
     strncat(inst->paths.PluginInstanceURL, "/", PATH_MAX);

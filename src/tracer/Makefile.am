@@ -21,6 +21,7 @@ SUBDIRS = ../PPB
 
 tracer_LDADD = \
     $(top_srcdir)/src/PPB/libPPB.a \
+    @PANGOFT2_LIBS@ \
     @CURL_LIBS@ \
     @URIPARSER_LIBS@ \
     @LIBDEP@

@@ -1,10 +1,12 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
+#include <sys/stat.h>
 
 #include <ppapi/c/ppp.h>
 #include <ppapi/c/ppp_instance.h>
 #include <ppapi/c/pp_time.h>
+#include <ppapi/c/pp_errors.h>
 #include <ppapi/c/pp_completion_callback.h>
 
 #include <ppapi/c/ppb_url_loader.h>
@@ -12,13 +14,68 @@
 #include "log.h"
 #include "res.h"
 
-typedef struct url_loader_desc
+#include "PPB_Var.h"
+#include "PPB_URLUtil_Dev.h"
+#include "PPB_URLRequestInfo.h"
+#include "PPB_URLLoader.h"
+
+static int URL_COMPONENT_EMPTY(const char* s, struct PP_URLComponent_Dev c)
 {
-    PP_Instance instance_id;
-} url_loader_t;
+    return (c.begin == 0 && c.len == -1)?1:0;
+};
+
+#define CHAR_EQ(IDX, U, L)      \
+    u = s[c.begin + IDX];       \
+    if(u != U && u != L)        \
+        return 0;
+
+static int URL_COMPONENT_IS_FILE(const char* s, struct PP_URLComponent_Dev c)
+{
+    char u;
+
+    if(URL_COMPONENT_EMPTY(s, c) || c.len != 4)
+        return 0;
+
+    CHAR_EQ(0, 'F', 'f');
+    CHAR_EQ(1, 'I', 'i');
+    CHAR_EQ(2, 'L', 'l');
+    CHAR_EQ(3, 'E', 'e');
+
+    return 1;
+};
+
+static int URL_COMPONENT_IS_FTP(const char* s, struct PP_URLComponent_Dev c)
+{
+    char u;
+
+    if(URL_COMPONENT_EMPTY(s, c) || c.len != 3)
+        return 0;
+
+    CHAR_EQ(0, 'F', 'f');
+    CHAR_EQ(1, 'T', 't');
+    CHAR_EQ(2, 'P', 'p');
+
+    return 1;
+};
+
+static int URL_COMPONENT_IS_HTTP(const char* s, struct PP_URLComponent_Dev c)
+{
+    char u;
+
+    if(URL_COMPONENT_EMPTY(s, c) || c.len != 4)
+        return 0;
+
+    CHAR_EQ(0, 'H', 'h');
+    CHAR_EQ(1, 'T', 't');
+    CHAR_EQ(2, 'T', 't');
+    CHAR_EQ(3, 'P', 'p');
+
+    return 1;
+};
 
 static void Destructor(url_loader_t* url_load)
 {
+    LOG("");
 };
 
 struct PPB_URLLoader_1_0 PPB_URLLoader_1_0_instance;
@@ -82,8 +139,95 @@ static PP_Bool IsURLLoader(PP_Resource resource)
  */
 static int32_t Open(PP_Resource loader, PP_Resource request_info, struct PP_CompletionCallback callback)
 {
-    LOG_NP;
-    return 0;
+    int curl = 0;
+    const char* url;
+    struct PP_Var url_var;
+    struct PP_URLComponents_Dev comp;
+    url_loader_t* url_loader = (url_loader_t*)res_private(loader);
+    url_request_info_t* url_request_info = (url_request_info_t*)res_private(request_info);
+
+    LOG("{%d}", loader);
+
+    /* parse url */
+    url_var = url_request_info->props[PP_URLREQUESTPROPERTY_URL];
+    if(url_var.type != PP_VARTYPE_STRING)
+    {
+        LOG("{%d} url is not a string", loader);
+        return PP_ERROR_BADARGUMENT;
+    };
+
+    /* check if supported */
+    url = VarToUtf8(url_var, NULL);
+    uriparser_parse(url, &comp);
+    if
+    (
+        (
+            URL_COMPONENT_EMPTY(url, comp.scheme)
+            ||
+            URL_COMPONENT_IS_FILE(url, comp.scheme)
+        )
+        &&
+        (!URL_COMPONENT_EMPTY(url, comp.path))
+    )
+    {
+        LOG("will try localfile");
+        curl = 0;
+    }
+    else if
+    (
+        URL_COMPONENT_IS_FTP(url, comp.scheme)
+        ||
+        URL_COMPONENT_IS_HTTP(url, comp.scheme)
+    )
+    {
+        LOG("will try curl");
+        curl = 1;
+    }
+    else
+    {
+        LOG("NOTHING");
+        return PP_ERROR_BADARGUMENT;
+    };
+
+    /* save request */
+    url_loader->request_info = request_info;
+    res_add_ref(request_info);
+    url_loader->url_request_info = url_request_info;
+
+    /* */
+    if(curl)
+    {
+        LOG_NP;
+    }
+    else
+    {
+        char* filename;
+
+        filename = calloc(1, comp.path.len + 1);
+        memcpy(filename, url + comp.path.begin, comp.path.len);
+        url_loader->reader = fopen(filename, "rb");
+        free(filename);
+
+        url_loader->response.HEADERS = VarFromUtf8("", 0);
+
+        if(url_loader->reader)
+        {
+            struct stat st;
+
+            url_loader->response.STATUSCODE = PP_MakeInt32(200);
+
+            memset(&st, 0, sizeof(st));
+            stat(filename, &st);
+
+            url_loader->bytes_received = st.st_size;
+        }
+        else
+            url_loader->response.STATUSCODE = PP_MakeInt32(404);
+
+        url_loader->total_bytes_to_be_received = 0;
+    };
+
+    return PP_OK; //_COMPLETIONPENDING;
 };
 
 /**
@@ -150,8 +294,15 @@ static PP_Bool GetUploadProgress(PP_Resource loader, int64_t* bytes_sent,  int64
  */
 static PP_Bool GetDownloadProgress(PP_Resource loader, int64_t* bytes_received, int64_t* total_bytes_to_be_received)
 {
-    LOG_NP;
-    return 0;
+    url_loader_t* url_loader = (url_loader_t*)res_private(loader);
+
+    if(!url_loader->reader)
+        return 0;
+
+    url_loader->bytes_received = bytes_received;
+    url_loader->total_bytes_to_be_received = total_bytes_to_be_received;
+
+    return 1;
 };
 
 /**
@@ -166,8 +317,8 @@ static PP_Bool GetDownloadProgress(PP_Resource loader, int64_t* bytes_received, 
  */
 static PP_Resource GetResponseInfo(PP_Resource loader)
 {
-    LOG_NP;
-    return 0;
+    res_add_ref(loader);
+    return loader;
 };
 
 
@@ -191,8 +342,24 @@ static PP_Resource GetResponseInfo(PP_Resource loader)
 static int32_t ReadResponseBody(PP_Resource loader, void* buffer, int32_t bytes_to_read,
     struct PP_CompletionCallback callback)
 {
-    LOG_NP;
-    return 0;
+    int r;
+    url_loader_t* url_loader = (url_loader_t*)res_private(loader);
+
+    if(url_loader->reader)
+    {
+        r = fread(buffer, 1, bytes_to_read, url_loader->reader);
+        if(-1 == r)
+            r = PP_ERROR_FAILED;
+        else if (0 == r)
+        {
+            LOG_NP;
+            r = PP_OK_COMPLETIONPENDING;
+        }
+    }
+    else
+        r = PP_ERROR_FAILED;
+
+    return r;
 };
 
 

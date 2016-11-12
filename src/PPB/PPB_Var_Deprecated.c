@@ -68,7 +68,7 @@ static struct PP_Var GetProperty(struct PP_Var object,  struct PP_Var name,
     q = VarToUtf8(name, &len);
     LOG("name=[%s]", q);
 
-    return PP_MakeInt32(0);
+    return PP_MakeUndefined();
 };
 
 /**

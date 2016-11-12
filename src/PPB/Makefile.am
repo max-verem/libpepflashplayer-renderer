@@ -59,4 +59,5 @@ INCLUDES = \
     -I$(top_srcdir)/src/pepper_obsolete \
     @URIPARSER_CFLAGS@ \
     @CURL_CFLAGS@ \
+    @PANGOFT2_CFLAGS@ \
     -I$(top_srcdir)/src/common
