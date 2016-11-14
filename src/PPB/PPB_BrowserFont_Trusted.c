@@ -90,9 +90,9 @@ static struct PP_Var GetFontFamilies(PP_Instance instance)
 
 struct PPB_BrowserFont_Trusted_1_0 PPB_BrowserFont_Trusted_1_0_instance;
 
-static void Destructor(browser_font_trusted_t* url_load)
+static void Destructor(browser_font_trusted_t* ctx)
 {
-    LOG("");
+    LOG("{%d}", ctx->self);
 };
 
 /**
@@ -109,6 +109,7 @@ static PP_Resource Create(PP_Instance instance, const struct PP_BrowserFont_Trus
     g_type_init();
 
     font->instance_id = instance;
+    font->self = res;
     font->description = *description;
 
     LOG("res=%d, description->size=%d", res, description->size);
@@ -116,7 +117,7 @@ static PP_Resource Create(PP_Instance instance, const struct PP_BrowserFont_Trus
     /* get description */
     if(description->face.type == PP_VARTYPE_STRING)
     {
-        LOG("description->face=[%s]", VarToUtf8(description->face, NULL));
+        LOG("{%d} description->face=[%s]", res, VarToUtf8(description->face, NULL));
 
         desc = pango_font_description_from_string(VarToUtf8(description->face, NULL));
     }
@@ -125,7 +126,7 @@ static PP_Resource Create(PP_Instance instance, const struct PP_BrowserFont_Trus
         static const char* families[PP_BROWSERFONT_TRUSTED_FAMILY_MONOSPACE + 1] =
             {"normal", "serif", "sans", "monospace"};
 
-        LOG("description->family=[%d]->[%s]", description->family, families[description->family]);
+        LOG("{%d} description->family=[%d]->[%s]", res, description->family, families[description->family]);
 
         desc = pango_font_description_new();
         pango_font_description_set_family(desc, "serif");
@@ -199,7 +200,8 @@ static PP_Bool Describe(PP_Resource font,
 
     /* size */
     description->size = pango_font_description_get_size(desc) / PANGO_SCALE;
-LOG("description->size=%d", description->size);
+    LOG("{%d} description->size=%d", font, description->size);
+
     /* weight */
     description->weight = pango_font_description_get_weight(desc)/100 - 1;
 
@@ -246,7 +248,17 @@ static PP_Bool DrawTextAt(PP_Resource font, PP_Resource image_data,
     const struct PP_BrowserFont_Trusted_TextRun* text, const struct PP_Point* position,
     uint32_t color, const struct PP_Rect* clip, PP_Bool image_data_is_opaque)
 {
+    uint32_t len = 0;
+    const char *s = "";
+
     LOG_NP;
+
+    if(text->text.type == PP_VARTYPE_STRING)
+        s = VarToUtf8(text->text, &len);
+
+    LOG("{%d} image_data=%d, position.x=%d, position.y=%d, color=%.8X, text=[%s]",
+        font, image_data, position->x, position->y, color, s);
+
     return 0;
 };
 
@@ -284,7 +296,7 @@ static int32_t MeasureText(PP_Resource font, const struct PP_BrowserFont_Trusted
 
     pango_layout_get_pixel_size(layout, &width, &height);
 
-    LOG("width=%d", width);
+    LOG("{%d} text->text=[%s] width=%d", font, s, width);
 
     /* free it */
     pango_font_description_free(desc);

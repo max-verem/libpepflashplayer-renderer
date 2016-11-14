@@ -73,9 +73,9 @@ static int URL_COMPONENT_IS_HTTP(const char* s, struct PP_URLComponent_Dev c)
     return 1;
 };
 
-static void Destructor(url_loader_t* url_load)
+static void Destructor(url_loader_t* ctx)
 {
-    LOG("");
+    LOG("{%d}", ctx->self);
 };
 
 struct PPB_URLLoader_1_0 PPB_URLLoader_1_0_instance;
@@ -99,6 +99,7 @@ static PP_Resource Create(PP_Instance instance)
     url_loader_t* url_loader = (url_loader_t*)res_private(res);
 
     url_loader->instance_id = instance;
+    url_loader->self = res;
 
     LOG("res=%d", res);
 
@@ -170,7 +171,7 @@ static int32_t Open(PP_Resource loader, PP_Resource request_info, struct PP_Comp
         (!URL_COMPONENT_EMPTY(url, comp.path))
     )
     {
-        LOG("will try localfile");
+        LOG("{%d} will try localfile", loader);
         curl = 0;
     }
     else if
@@ -180,12 +181,12 @@ static int32_t Open(PP_Resource loader, PP_Resource request_info, struct PP_Comp
         URL_COMPONENT_IS_HTTP(url, comp.scheme)
     )
     {
-        LOG("will try curl");
+        LOG("{%d} will try curl", loader);
         curl = 1;
     }
     else
     {
-        LOG("NOTHING");
+        LOG("{%d} NOTHING", loader);
         return PP_ERROR_BADARGUMENT;
     };
 
@@ -299,8 +300,8 @@ static PP_Bool GetDownloadProgress(PP_Resource loader, int64_t* bytes_received, 
     if(!url_loader->reader)
         return 0;
 
-    url_loader->bytes_received = bytes_received;
-    url_loader->total_bytes_to_be_received = total_bytes_to_be_received;
+    *bytes_received = url_loader->bytes_received;
+    *total_bytes_to_be_received = url_loader->total_bytes_to_be_received;
 
     return 1;
 };

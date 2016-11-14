@@ -94,7 +94,7 @@ struct PP_Var VarFromUtf8(const char* data, uint32_t len)
     if(len && data)
         memcpy(dst, data, len);
 
-    LOG("data=[%s], len=%d", data, len);
+    LOG1("data=[%s], len=%d", data, len);
 
     return var;
 };
@@ -134,7 +134,7 @@ const char* VarToUtf8(struct PP_Var var, uint32_t* len)
     if(len)
         *len = res_private_size(var.value.as_id) - 1;
 
-    LOG("r=[%s], *len=%d, strlen=%zd", r, (len)?(*len):0, strlen(r));
+    LOG1("r=[%s], *len=%d, strlen=%zd", r, (len)?(*len):0, strlen(r));
 
     return r;
 };

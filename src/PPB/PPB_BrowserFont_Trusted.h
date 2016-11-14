@@ -10,6 +10,7 @@
 typedef struct browser_font_trusted_desc
 {
     PP_Instance instance_id;
+    PP_Resource self;
 
     struct PP_BrowserFont_Trusted_Description description;
 

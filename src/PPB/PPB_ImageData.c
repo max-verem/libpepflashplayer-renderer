@@ -28,9 +28,9 @@ static PP_Bool IsImageDataFormatSupported(PP_ImageDataFormat format)
 
 struct PPB_ImageData_1_0 PPB_ImageData_1_0_instance;
 
-static void Destructor(image_data_t* url_load)
+static void Destructor(image_data_t* ctx)
 {
-    LOG("");
+    LOG("{%d}", ctx->self);
 };
 
 static PP_Resource Create(PP_Instance instance, PP_ImageDataFormat format,
@@ -41,6 +41,7 @@ static PP_Resource Create(PP_Instance instance, PP_ImageDataFormat format,
     image_data_t* image_data = (image_data_t*)res_private(res);
 
     image_data->instance_id = instance;
+    image_data->self = res;
     image_data->size = *size;
     image_data->format = format;
     image_data->buf = calloc(1, 4 * size->width * size->height);

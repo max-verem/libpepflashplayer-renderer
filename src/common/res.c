@@ -79,7 +79,7 @@ PP_Resource res_create(size_t private_size, void* interface, res_destructor_t de
     PP_Resource res = 0;
     res_t* r = calloc(1, sizeof(res_t));
 
-    LOG("private_size=%zd", private_size);
+    LOG1("private_size=%zd", private_size);
 
     r->ref = 1;
     r->priv = calloc(1, private_size);
@@ -111,7 +111,7 @@ PP_Resource res_create(size_t private_size, void* interface, res_destructor_t de
 
     pthread_mutex_unlock(&lock);
 
-    LOG("private_size=%zd, res=%d", private_size, res);
+    LOG1("private_size=%zd, res=%d", private_size, res);
 
     return res;
 };
@@ -134,7 +134,7 @@ int res_release(PP_Resource res)
 {
     int r = -ENOENT;
 
-LOG("res=%d", res);
+    LOG1("res=%d", res);
 
     pthread_mutex_lock(&lock);
 

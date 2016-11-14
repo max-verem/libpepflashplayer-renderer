@@ -10,6 +10,7 @@
 typedef struct url_request_info_desc
 {
     PP_Instance instance_id;
+    PP_Resource self;
     struct PP_Var props[PP_URLREQUESTPROPERTY_LAST];
 } url_request_info_t;
 

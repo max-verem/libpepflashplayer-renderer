@@ -17,12 +17,14 @@
 
 typedef struct ppb_var_deprecated_desc
 {
+    PP_Resource self;
     const struct PPP_Class_Deprecated* object_class;
     void* object_data;
 } ppb_var_deprecated_t;
 
-static void ppb_var_deprecated_destructor(ppb_var_deprecated_t* p)
+static void ppb_var_deprecated_destructor(ppb_var_deprecated_t* ctx)
 {
+    LOG("{%d}", ctx->self);
 };
 
 /**
@@ -61,7 +63,7 @@ static bool HasMethod(struct PP_Var object, struct PP_Var name,
 static struct PP_Var GetProperty(struct PP_Var object,  struct PP_Var name,
     struct PP_Var* exception)
 {
-    char* q;
+    const char* q;
     uint32_t len;
 
     LOG_NP;
@@ -229,6 +231,7 @@ static struct PP_Var CreateObject(PP_Instance instance,
     dst = (ppb_var_deprecated_t*)res_private(var.value.as_id);
     dst->object_class = object_class;
     dst->object_data = object_data;
+    dst->self = var.value.as_id;
 
     return var;
 };

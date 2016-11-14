@@ -3,6 +3,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <pthread.h>
+#include <sys/time.h>
 
 #include <ppapi/c/ppp.h>
 #include <ppapi/c/ppp_instance.h>
@@ -15,13 +16,42 @@
 #include "log.h"
 #include "res.h"
 
+#include "PPB_MessageLoop.h"
+
+static int64_t _now_us()
+{
+    int64_t r;
+    struct timeval tv;
+
+    gettimeofday(&tv, NULL);
+
+    r = tv.tv_sec;
+    r *= 1000000LL;
+    r += tv.tv_usec;
+
+    return r;
+};
+
 struct PPB_MessageLoop_1_0 PPB_MessageLoop_1_0_instance;
+
+typedef struct message_loop_item_desc
+{
+    struct PP_CompletionCallback callback;
+    int64_t delay_ms;
+    int32_t result;
+    int64_t now;
+    struct message_loop_item_desc* next;
+} message_loop_item_t;
 
 typedef struct message_loop_desc
 {
     PP_Instance instance_id;
+    PP_Resource self;
     pthread_t thread;
     int registry_idx;
+    message_loop_item_t* items;
+    pthread_cond_t cond;
+    int f_exit;
 } message_loop_t;
 
 typedef struct message_loop_map_desc
@@ -44,8 +74,22 @@ static struct
 
 pthread_t PPB_MessageLoop_main_thread = 0;
 
-static void Destructor(message_loop_t* msg_loop)
+static void Destructor(message_loop_t* ctx)
 {
+    message_loop_item_t* item;
+
+    LOG("{%d}", ctx->self);
+
+    /* free items */
+    for(item = ctx->items; item;)
+    {
+        message_loop_item_t* tmp = item->next;
+        free(item);
+        item = tmp;
+    };
+
+    /* destroy conditional */
+    pthread_cond_destroy(&ctx->cond);
 };
 
 /**
@@ -62,6 +106,8 @@ static PP_Resource Create(PP_Instance instance)
     message_loop_t* msg_loop = (message_loop_t*)res_private(res);
 
     msg_loop->instance_id = instance;
+    msg_loop->self = res;
+    pthread_cond_init(&msg_loop->cond, NULL);
 
     return res;
 };
@@ -193,9 +239,42 @@ static int32_t AttachToCurrentThread(PP_Resource res)
  * fashion (Run is already on the stack). This will occur if you attempt
  * to call run on the main thread's message loop (see above).
  */
-static int32_t Run(PP_Resource message_loop)
+static int32_t Run(PP_Resource res)
 {
-    LOG_NP;
+    message_loop_item_t* item;
+    message_loop_t* msg_loop = (message_loop_t*)res_private(res);
+
+    LOG("{%d}", res);
+
+    while(!msg_loop->f_exit)
+    {
+        pthread_mutex_lock(&registry.lock);
+
+        LOG1("{%d} msg_loop=%p, msg_loop->f_exit=%d, msg_loop->items=%p",
+            res, msg_loop, msg_loop->f_exit, msg_loop->items);
+
+        while(!msg_loop->f_exit && !msg_loop->items)
+            pthread_cond_wait(&msg_loop->cond, &registry.lock);
+
+        if(msg_loop->items)
+        {
+            item = msg_loop->items;
+            msg_loop->items = item->next;
+        };
+
+        pthread_mutex_unlock(&registry.lock);
+
+        if(item)
+        {
+            LOG1("%d", res);
+
+            item->callback.func(item->callback.user_data, item->result);
+
+            free(item);
+            item = NULL;
+        };
+    };
+
     return 0;
 };
 
@@ -244,8 +323,65 @@ static int32_t Run(PP_Resource message_loop)
  */
 static int32_t PostWork(PP_Resource message_loop, struct PP_CompletionCallback callback, int64_t delay_ms)
 {
-    LOG_NP;
-    return 0;
+    LOG_TD;
+    return PPB_MessageLoop_push(message_loop, callback, delay_ms, PP_OK);
+};
+
+int PPB_MessageLoop_push(PP_Resource message_loop, struct PP_CompletionCallback callback, int64_t delay_ms, int32_t result)
+{
+    int r, i;
+
+    /* find main thread */
+    pthread_mutex_lock(&registry.lock);
+
+    LOG1("message_loop=%d", message_loop);
+
+    /* find message loop for main thread */
+    if(!message_loop)
+    {
+
+        for(r = -1, i = 0; i < registry.count && -1 == r; i++)
+            if(PPB_MessageLoop_main_thread == registry.list[i].thread)
+            {
+                message_loop = registry.list[i].msg_loop;
+                r = i;
+            };
+    };
+
+    LOG1("message_loop=%d", message_loop);
+
+    /* push into queue */
+    if(message_loop <= 0)
+    {
+        r = PP_ERROR_BADRESOURCE;
+        LOG("message loop not found");
+    }
+    else
+    {
+        message_loop_t* ctx = (message_loop_t*)res_private(message_loop);
+        message_loop_item_t* item = (message_loop_item_t*)calloc(1, sizeof(message_loop_item_t));
+
+        /* create item */
+        item->callback = callback;
+        item->delay_ms = delay_ms;
+        item->result = result;
+        item->now = _now_us() / 1000LL;
+        item->next = ctx->items;
+
+        /* append it */
+        ctx->items = item;
+
+        LOG1("{%d} msg_loop=%p, msg_loop->f_exit=%d, msg_loop->items=%p",
+            message_loop, ctx, ctx->f_exit, ctx->items);
+
+        pthread_cond_signal(&ctx->cond);
+
+        r = 0;
+    };
+
+    pthread_mutex_unlock(&registry.lock);
+
+    return r;
 };
 
 
@@ -276,6 +412,7 @@ static int32_t PostQuit(PP_Resource message_loop, PP_Bool should_destroy)
     LOG_NP;
     return 0;
 };
+
 
 /**
  * A message loop allows PPAPI calls to be issued on a thread. You may not

@@ -20,6 +20,7 @@ enum url_loader_states
 typedef struct url_loader_desc
 {
     PP_Instance instance_id;
+    PP_Resource self;
 
     PP_Resource request_info;
     url_request_info_t* url_request_info;

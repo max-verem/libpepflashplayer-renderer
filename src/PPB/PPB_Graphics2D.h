@@ -7,6 +7,7 @@
 typedef struct graphics_2d_desc
 {
     PP_Instance instance_id;
+    PP_Resource self;
 
     struct PP_Size size;
     PP_Bool is_always_opaque;

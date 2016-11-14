@@ -19,12 +19,15 @@ struct PPB_AudioConfig_1_1 PPB_AudioConfig_1_1_instance;
 
 typedef struct
 {
+    PP_Instance instance;
+    PP_Resource self;
     PP_AudioSampleRate sample_rate;
     uint32_t sample_frame_count;
 } audio_config_t;
 
 static void Destructor(audio_config_t* ctx)
 {
+    LOG("{%d}", ctx->self);
 };
 
 static PP_Resource CreateStereo16Bit(PP_Instance instance,
@@ -34,6 +37,8 @@ static PP_Resource CreateStereo16Bit(PP_Instance instance,
     PP_Resource res = res_create(sizeof(audio_config_t), &PPB_AudioConfig_1_1_instance, (res_destructor_t)Destructor);
 
     ctx = (audio_config_t*)res_private(res);
+    ctx->instance = instance;
+    ctx->self = res;
     ctx->sample_rate = sample_rate;
     ctx->sample_frame_count = sample_frame_count;
 

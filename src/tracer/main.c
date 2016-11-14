@@ -14,7 +14,10 @@
 
 #include "PPB_MessageLoop.h"
 
-#define SWF "demo.swf"
+//#define SWF "demo.swf"
+//#define SWF "demo1_2_movie.swf"
+#define SWF "demo1_2_image.swf"
+
 const char* so_name = "/tmp/flash/libpepflashplayer.so";
 const char* local_path = "/tmp/flash/local";
 const char* swf_path = "file:///tmp/flash/src";
@@ -50,6 +53,8 @@ LOG("instance_id=%d", instance_id);
     strncat(inst->paths.PluginInstanceURL, "/", PATH_MAX);
     strncat(inst->paths.PluginInstanceURL, swf_name, PATH_MAX);
 
+    inst->is_full_screen = 1;
+
     r = mod_load(so_name, &mod);
     if(!r)
     {
@@ -58,7 +63,6 @@ LOG("instance_id=%d", instance_id);
 
 LOG("mod->id=%d", mod->id);
 
-#if 1
         inst->message_loop_id = msg_loop_interface->Create(inst->instance_id);
 
 LOG("inst->message_loop_id=%d", inst->message_loop_id);
@@ -68,7 +72,6 @@ LOG("inst->message_loop_id=%d", inst->message_loop_id);
 LOG("msg_loop_interface->AttachToCurrentThread=%d", r);
 
         r = PPB_MessageLoop_main_thread = pthread_self();
-#endif
 
         r = mod->instance_interface->DidCreate(inst->instance_id, 5, argn, argv);
 
@@ -84,8 +87,9 @@ LOG("mod->instance_interface->DidCreate=%d", r);
 
 LOG("mod->instance_private_interface=%p", mod->instance_private_interface);
 
-LOG("Sleeping...");
-sleep(3);
+
+LOG("Run main loop...");
+        r = msg_loop_interface->Run(inst->message_loop_id);
 LOG("Exiting...");
 
         mod->instance_interface->DidDestroy(inst->instance_id);

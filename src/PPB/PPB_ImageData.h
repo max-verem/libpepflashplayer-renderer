@@ -7,6 +7,7 @@
 typedef struct image_data_desc
 {
     PP_Instance instance_id;
+    PP_Resource self;
 
     struct PP_Size size;
     PP_ImageDataFormat format;

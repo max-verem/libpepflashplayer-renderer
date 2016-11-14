@@ -33,15 +33,15 @@ static const char* URLRequestProperties[PP_URLREQUESTPROPERTY_LAST] =
     "CUSTOMUSERAGENT",
 };
 
-static void Destructor(url_request_info_t* url_req)
+static void Destructor(url_request_info_t* ctx)
 {
     int i;
 
-    LOG("");
+    LOG("{%d}", ctx->self);
 
     for(i = 0; i < PP_URLREQUESTPROPERTY_LAST; i++)
-        if(url_req->props[i].type != PP_VARTYPE_UNDEFINED)
-            PPB_Var_Release(url_req->props[i]);
+        if(ctx->props[i].type != PP_VARTYPE_UNDEFINED)
+            PPB_Var_Release(ctx->props[i]);
 };
 
 struct PPB_URLRequestInfo_1_0 PPB_URLRequestInfo_1_0_instance;
@@ -62,6 +62,7 @@ static PP_Resource Create(PP_Instance instance)
     url_request_info_t* url_req = (url_request_info_t*)res_private(res);
 
     url_req->instance_id = instance;
+    url_req->self = res;
 
     LOG("res=%d", res);
 

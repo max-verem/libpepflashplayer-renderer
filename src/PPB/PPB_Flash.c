@@ -79,9 +79,7 @@ static void UpdateActivity(PP_Instance instance)
 #define LOG_GetSetting_case(S) case S: LOG("%s", #S);
 static struct PP_Var GetSetting(PP_Instance instance, PP_FlashSetting setting)
 {
-    struct PP_Var r = PP_MakeInt32(0);
-
-    LOG("");
+    struct PP_Var r = PP_MakeUndefined();
 
     switch(setting)
     {
