@@ -353,11 +353,13 @@ static int32_t ReadResponseBody(PP_Resource loader, void* buffer, int32_t bytes_
         else if (0 == r)
         {
             LOG_NP;
-            r = PP_OK_COMPLETIONPENDING;
+//            r = PP_OK_COMPLETIONPENDING;
         }
     }
     else
         r = PP_ERROR_FAILED;
+
+    LOG("{%d}, r=%d, bytes_to_read=%d", loader, r, bytes_to_read);
 
     return r;
 };

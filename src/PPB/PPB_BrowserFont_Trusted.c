@@ -7,14 +7,14 @@
 #include <ppapi/c/pp_time.h>
 #include <ppapi/c/pp_completion_callback.h>
 
-#include <ppapi/c/trusted/ppb_browser_font_trusted.h>
-
 #include "log.h"
+#include "res.h"
 
 #include <glib.h>
 #include <pango/pangoft2.h>
 
 #include "PPB_Var.h"
+#include "PPB_BrowserFont_Trusted.h"
 
 static int pango_font_family_cmp_name(PangoFontFamily* fa, PangoFontFamily* fb)
 {
@@ -88,14 +88,68 @@ static struct PP_Var GetFontFamilies(PP_Instance instance)
     return r;
 };
 
+struct PPB_BrowserFont_Trusted_1_0 PPB_BrowserFont_Trusted_1_0_instance;
+
+static void Destructor(browser_font_trusted_t* url_load)
+{
+    LOG("");
+};
+
 /**
  * Returns a font which best matches the given description. The return value
  * will have a non-zero ID on success, or zero on failure.
  */
 static PP_Resource Create(PP_Instance instance, const struct PP_BrowserFont_Trusted_Description* description)
 {
-    LOG_NP;
-    return 0;
+    PangoFontDescription *desc;
+    int res = res_create(sizeof(browser_font_trusted_t), &PPB_BrowserFont_Trusted_1_0_instance, (res_destructor_t)Destructor);
+
+    browser_font_trusted_t* font = (browser_font_trusted_t*)res_private(res);
+
+    g_type_init();
+
+    font->instance_id = instance;
+    font->description = *description;
+
+    LOG("res=%d, description->size=%d", res, description->size);
+
+    /* get description */
+    if(description->face.type == PP_VARTYPE_STRING)
+    {
+        LOG("description->face=[%s]", VarToUtf8(description->face, NULL));
+
+        desc = pango_font_description_from_string(VarToUtf8(description->face, NULL));
+    }
+    else
+    {
+        static const char* families[PP_BROWSERFONT_TRUSTED_FAMILY_MONOSPACE + 1] =
+            {"normal", "serif", "sans", "monospace"};
+
+        LOG("description->family=[%d]->[%s]", description->family, families[description->family]);
+
+        desc = pango_font_description_new();
+        pango_font_description_set_family(desc, "serif");
+    };
+
+    /* set description */
+    pango_font_description_set_size(desc, PANGO_SCALE * description->size );
+    pango_font_description_set_weight(desc, (PangoWeight)(100 * (description->weight + 1)));
+    pango_font_description_set_style(desc, description->italic ? PANGO_STYLE_ITALIC : PANGO_STYLE_NORMAL );
+    pango_font_description_set_variant(desc, description->small_caps ? PANGO_VARIANT_SMALL_CAPS : PANGO_VARIANT_NORMAL);
+
+    /* get fontmap */
+    font->fontmap = (PangoFT2FontMap*)pango_ft2_font_map_new();
+
+    /* get context */
+    font->context = pango_ft2_font_map_create_context(font->fontmap);
+
+    /* load it */
+    font->font = pango_context_load_font(font->context, desc);
+
+    /* free it */
+    pango_font_description_free(desc);
+
+    return res;
 };
 
 /**
@@ -104,8 +158,7 @@ static PP_Resource Create(PP_Instance instance, const struct PP_BrowserFont_Trus
  */
 static PP_Bool IsFont(PP_Resource resource)
 {
-    LOG_NP;
-    return 0;
+    return (res_interface(resource) == &PPB_BrowserFont_Trusted_1_0_instance);
 };
 
 /**
@@ -125,7 +178,49 @@ static PP_Bool Describe(PP_Resource font,
     struct PP_BrowserFont_Trusted_Description* description,
     struct PP_BrowserFont_Trusted_Metrics* metrics)
 {
-    LOG_NP;
+    const char *buf;
+    PangoFontMetrics *metr;
+    PangoFontDescription *desc;
+    browser_font_trusted_t* ctx = (browser_font_trusted_t*)res_private(font);
+
+    memset(description, 0, sizeof(struct PP_BrowserFont_Trusted_Description));
+    memset(metrics, 0, sizeof(struct PP_BrowserFont_Trusted_Metrics));
+
+    /* get it */
+    desc = pango_font_describe_with_absolute_size(ctx->font);
+    metr = pango_font_get_metrics(ctx->font, NULL);
+
+    /* family / face */
+    buf = pango_font_description_get_family(desc);
+    if(buf)
+        description->face = VarFromUtf8_c(buf);
+    else
+        description->face = PP_MakeUndefined();
+
+    /* size */
+    description->size = pango_font_description_get_size(desc) / PANGO_SCALE;
+LOG("description->size=%d", description->size);
+    /* weight */
+    description->weight = pango_font_description_get_weight(desc)/100 - 1;
+
+    /* italic */
+    description->italic = (pango_font_description_get_style(desc) != PANGO_STYLE_NORMAL);
+
+    /* small caps */
+    description->small_caps =
+            (pango_font_description_get_variant(desc) == PANGO_VARIANT_SMALL_CAPS);
+
+    /* metrics */
+    metrics->ascent = pango_font_metrics_get_ascent(metr) / PANGO_SCALE;
+    metrics->descent = pango_font_metrics_get_descent(metr) / PANGO_SCALE;
+    metrics->height = (pango_font_metrics_get_ascent(metr) + pango_font_metrics_get_descent(metr)) / PANGO_SCALE;
+    metrics->line_spacing = 1; /* ? */
+    metrics->x_height = metrics->height; /* ? */
+
+    /* free it */
+    pango_font_description_free(desc);
+    pango_font_metrics_unref(metr);
+
     return 0;
 };
 
@@ -167,8 +262,35 @@ static PP_Bool DrawTextAt(PP_Resource font, PP_Resource image_data,
  */
 static int32_t MeasureText(PP_Resource font, const struct PP_BrowserFont_Trusted_TextRun* text)
 {
-    LOG_NP;
-    return 0;
+    uint32_t len = 0;
+    int width, height;
+    const char *s = "";
+    PangoLayout *layout;
+    PangoFontDescription *desc;
+    browser_font_trusted_t* ctx = (browser_font_trusted_t*)res_private(font);
+
+    if(text->text.type != PP_VARTYPE_STRING)
+        return -1;
+
+    s = VarToUtf8(text->text, &len);
+
+    layout = pango_layout_new(ctx->context);
+
+    desc = /* pango_font_describe_with_absolute_size */ pango_font_describe(ctx->font);
+
+    pango_layout_set_font_description(layout, desc);
+
+    pango_layout_set_text(layout, s, len);
+
+    pango_layout_get_pixel_size(layout, &width, &height);
+
+    LOG("width=%d", width);
+
+    /* free it */
+    pango_font_description_free(desc);
+    g_object_unref(layout);
+
+    return width;
 };
 
 /**

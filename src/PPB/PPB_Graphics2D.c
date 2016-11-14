@@ -10,24 +10,46 @@
 #include <ppapi/c/ppb_graphics_2d.h>
 
 #include "log.h"
+#include "res.h"
+
+#include "PPB_Graphics2D.h"
+
+struct PPB_Graphics2D_1_1 PPB_Graphics2D_1_1_instance;
+
+static void Destructor(graphics_2d_t* url_req)
+{
+};
 
 static PP_Resource Create(PP_Instance instance,
     const struct PP_Size* size, PP_Bool is_always_opaque)
 {
-    LOG_NP;
-    return 0;
+    int res = res_create(sizeof(graphics_2d_t), &PPB_Graphics2D_1_1_instance, (res_destructor_t)Destructor);
+
+    graphics_2d_t* graphics_2d = (graphics_2d_t*)res_private(res);
+
+    graphics_2d->instance_id = instance;
+    graphics_2d->size = *size;
+    graphics_2d->is_always_opaque = is_always_opaque;
+    graphics_2d->scale = 1.0;
+
+    LOG("res=%d, size->width=%d, size->height=%d", res, size->width, size->height);
+
+    return res;
 };
 
-static PP_Bool IsGraphics2D(PP_Resource resource)
+static PP_Bool IsGraphics2D(PP_Resource res)
 {
-    LOG_NP;
-    return 0;
+    return (res_interface(res) == &PPB_Graphics2D_1_1_instance);
 };
 
-static PP_Bool Describe(PP_Resource graphics_2d, struct PP_Size* size, PP_Bool* is_always_opaque)
+static PP_Bool Describe(PP_Resource res, struct PP_Size* size, PP_Bool* is_always_opaque)
 {
-    LOG_NP;
-    return 0;
+    graphics_2d_t* graphics_2d = (graphics_2d_t*)res_private(res);
+
+    *size = graphics_2d->size;
+    *is_always_opaque = graphics_2d->is_always_opaque;
+
+    return 1;
 };
 
 static void PaintImageData(PP_Resource graphics_2d,
@@ -53,16 +75,20 @@ static int32_t Flush(PP_Resource graphics_2d, struct PP_CompletionCallback callb
     return 0;
 };
 
-static PP_Bool SetScale(PP_Resource resource, float scale)
+static PP_Bool SetScale(PP_Resource res, float scale)
 {
-    LOG_NP;
-    return 0;
+    graphics_2d_t* graphics_2d = (graphics_2d_t*)res_private(res);
+
+    graphics_2d->scale = scale;
+
+    return 1;
 };
 
-static float GetScale(PP_Resource resource)
+static float GetScale(PP_Resource res)
 {
-    LOG_NP;
-    return 0;
+    graphics_2d_t* graphics_2d = (graphics_2d_t*)res_private(res);
+
+    return graphics_2d->scale;
 };
 
 struct PPB_Graphics2D_1_1 PPB_Graphics2D_1_1_instance =
