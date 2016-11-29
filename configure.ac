@@ -17,7 +17,7 @@ AC_PROG_CXX
 
 AC_CHECK_FUNCS(localtime_r)
 
-LIBDEP=""
+LIBDEP="-lOpenGL -lEGL"
 AC_SUBST(LIBDEP)
 
 AC_CHECK_LIB([pthread], [pthread_create])

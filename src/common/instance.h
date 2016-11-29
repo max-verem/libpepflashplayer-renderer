@@ -19,6 +19,7 @@ typedef struct instance_desc
     PP_Instance instance_id;
     struct PP_Var private_instance_object;
     int is_full_frame, is_full_screen;
+    PP_Resource graphics_id;
 } instance_t;
 
 #endif /* INSTANCE_H */

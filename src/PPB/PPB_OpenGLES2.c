@@ -11,14 +11,18 @@
 
 #include "log.h"
 
+#include "PPB_Graphics3D.h"
+
 static void ActiveTexture(PP_Resource context, GLenum texture)
 {
-    LOG_NP;
+    LOG_TD;
+    glActiveTexture(texture);
 };
 
 static void AttachShader(PP_Resource context, GLuint program, GLuint shader)
 {
-    LOG_NP;
+    LOG_TD;
+    glAttachShader(program, shader);
 };
 
 static void BindAttribLocation(PP_Resource context,
@@ -26,12 +30,14 @@ static void BindAttribLocation(PP_Resource context,
                              GLuint index,
                              const char* name)
 {
-    LOG_NP;
+    LOG_TD;
+    glBindAttribLocation(program, index, name);
 };
 
 static void BindBuffer(PP_Resource context, GLenum target, GLuint buffer)
 {
-    LOG_NP;
+    LOG_TD;
+    glBindBuffer(target, buffer);
 };
 
 static void BindFramebuffer(PP_Resource context,
@@ -50,7 +56,8 @@ static void BindRenderbuffer(PP_Resource context,
 
 static void BindTexture(PP_Resource context, GLenum target, GLuint texture)
 {
-    LOG_NP;
+    LOG_TD;
+    glBindTexture(target, texture);
 };
 
 static void BlendColor(PP_Resource context,
@@ -59,24 +66,28 @@ static void BlendColor(PP_Resource context,
                      GLclampf blue,
                      GLclampf alpha)
 {
-    LOG_NP;
+    LOG_TD;
+    glBlendColor(red, green, blue, alpha);
 };
 
 static void BlendEquation(PP_Resource context, GLenum mode)
 {
-    LOG_NP;
+    LOG_TD;
+    glBlendEquation(mode);
 };
 
 static void BlendEquationSeparate(PP_Resource context,
                                 GLenum modeRGB,
                                 GLenum modeAlpha)
 {
-    LOG_NP;
+    LOG_TD;
+    glBlendEquationSeparate(modeRGB, modeAlpha);
 };
 
 static void BlendFunc(PP_Resource context, GLenum sfactor, GLenum dfactor)
 {
-    LOG_NP;
+    LOG_TD;
+    glBlendFunc(sfactor, dfactor);
 };
 
 static void BlendFuncSeparate(PP_Resource context,
@@ -85,7 +96,8 @@ static void BlendFuncSeparate(PP_Resource context,
                             GLenum srcAlpha,
                             GLenum dstAlpha)
 {
-    LOG_NP;
+    LOG_TD;
+    glBlendFuncSeparate(srcRGB, dstRGB, srcAlpha, dstAlpha);
 };
 
 static void BufferData(PP_Resource context,
@@ -94,7 +106,8 @@ static void BufferData(PP_Resource context,
                      const void* data,
                      GLenum usage)
 {
-    LOG_NP;
+    LOG_TD;
+    glBufferData(target, size, data, usage);
 };
 
 static void BufferSubData(PP_Resource context,
@@ -103,17 +116,20 @@ static void BufferSubData(PP_Resource context,
                         GLsizeiptr size,
                         const void* data)
 {
-    LOG_NP;
+    LOG_TD;
+    glBufferSubData(target, offset, size, data);
 };
 
 static GLenum CheckFramebufferStatus(PP_Resource context, GLenum target)
 {
-    LOG_NP;
+    LOG_TD;
+    return glCheckFramebufferStatus(target);
 };
 
 static void Clear(PP_Resource context, GLbitfield mask)
 {
-    LOG_NP;
+    LOG_TD;
+    glClear(mask);
 };
 
 static void ClearColor(PP_Resource context,
@@ -122,17 +138,20 @@ static void ClearColor(PP_Resource context,
                      GLclampf blue,
                      GLclampf alpha)
 {
-    LOG_NP;
+    LOG_TD;
+    glClearColor(red, green, blue, alpha);
 };
 
 static void ClearDepthf(PP_Resource context, GLclampf depth)
 {
-    LOG_NP;
+    LOG_TD;
+    glClearDepthf(depth);
 };
 
 static void ClearStencil(PP_Resource context, GLint s)
 {
-    LOG_NP;
+    LOG_TD;
+    glClearDepthf(s);
 };
 
 static void ColorMask(PP_Resource context,
@@ -141,12 +160,14 @@ static void ColorMask(PP_Resource context,
                     GLboolean blue,
                     GLboolean alpha)
 {
-    LOG_NP;
+    LOG_TD;
+    glColorMask(red, green, blue, alpha);
 };
 
 static void CompileShader(PP_Resource context, GLuint shader)
 {
-    LOG_NP;
+    LOG_TD;
+    glCompileShader(shader);
 };
 
 static void CompressedTexImage2D(PP_Resource context,
@@ -159,7 +180,8 @@ static void CompressedTexImage2D(PP_Resource context,
                                GLsizei imageSize,
                                const void* data)
 {
-    LOG_NP;
+    LOG_TD;
+    glCompressedTexImage2D(target, level, internalformat, width, height, border, imageSize, data);
 };
 
 static void CompressedTexSubImage2D(PP_Resource context,
@@ -173,7 +195,8 @@ static void CompressedTexSubImage2D(PP_Resource context,
                                   GLsizei imageSize,
                                   const void* data)
 {
-    LOG_NP;
+    LOG_TD;
+    glCompressedTexSubImage2D(target, level, xoffset, yoffset, width, height, format, imageSize, data);
 };
 
 static void CopyTexImage2D(PP_Resource context,
@@ -186,7 +209,8 @@ static void CopyTexImage2D(PP_Resource context,
                          GLsizei height,
                          GLint border)
 {
-    LOG_NP;
+    LOG_TD;
+    glCopyTexImage2D(target, level, internalformat, x, y, width, height, border);
 };
 
 static void CopyTexSubImage2D(PP_Resource context,
@@ -199,89 +223,104 @@ static void CopyTexSubImage2D(PP_Resource context,
                             GLsizei width,
                             GLsizei height)
 {
-    LOG_NP;
+    LOG_TD;
+    glCopyTexSubImage2D(target, level, xoffset, yoffset, x, y, width, height);
 };
 
 static GLuint CreateProgram(PP_Resource context)
 {
-    LOG_NP;
-    return 0;
+    LOG_TD;
+    return glCreateProgram();
 };
 
 static GLuint CreateShader(PP_Resource context, GLenum type)
 {
-    LOG_NP;
+    LOG_TD;
+    return glCreateShader(type);
 };
 
 static void CullFace(PP_Resource context, GLenum mode)
 {
-    LOG_NP;
+    LOG_TD;
+    glCullFace(mode);
 };
 
 static void DeleteBuffers(PP_Resource context, GLsizei n, const GLuint* buffers)
 {
-    LOG_NP;
+    LOG_TD;
+    glDeleteBuffers(n, buffers);
 };
 
 static void DeleteFramebuffers(PP_Resource context,
                              GLsizei n,
                              const GLuint* framebuffers)
 {
-    LOG_NP;
+    LOG_TD;
+    glDeleteFramebuffers(n, framebuffers);
 };
 
 static void DeleteProgram(PP_Resource context, GLuint program)
 {
-    LOG_NP;
+    LOG_TD;
+    glDeleteProgram(program);
 };
 
 static void DeleteRenderbuffers(PP_Resource context,
                               GLsizei n,
                               const GLuint* renderbuffers)
 {
-    LOG_NP;
+    LOG_TD;
+    glDeleteRenderbuffers(n, renderbuffers);
 };
 
 static void DeleteShader(PP_Resource context, GLuint shader)
 {
-    LOG_NP;
+    LOG_TD;
+    glDeleteShader(shader);
 };
 
 static void DeleteTextures(PP_Resource context,
                          GLsizei n,
                          const GLuint* textures)
 {
-    LOG_NP;
+    LOG_TD;
+    glDeleteTextures(n, textures);
 };
 
 static void DepthFunc(PP_Resource context, GLenum func)
 {
-    LOG_NP;
+    LOG_TD;
+    glDepthFunc(func);
 };
 
 static void DepthMask(PP_Resource context, GLboolean flag)
 {
-    LOG_NP;
+    LOG_TD;
+    glDepthMask(flag);
 };
 
 static void DepthRangef(PP_Resource context, GLclampf zNear, GLclampf zFar)
 {
-    LOG_NP;
+    LOG_TD;
+    glDepthRangef(zNear, zFar);
 };
 
 static void DetachShader(PP_Resource context, GLuint program, GLuint shader)
 {
-    LOG_NP;
+    LOG_TD;
+    glDetachShader(program, shader);
 };
 
 static void Disable(PP_Resource context, GLenum cap)
 {
-    LOG_NP;
+    LOG_TD;
+    glDisable(cap);
 };
 
 static void DisableVertexAttribArray(PP_Resource context, GLuint index)
 {
-    LOG_NP;
+    LOG_TD;
+    glDisableVertexAttribArray(index);
 };
 
 static void DrawArrays(PP_Resource context,
@@ -289,7 +328,8 @@ static void DrawArrays(PP_Resource context,
                      GLint first,
                      GLsizei count)
 {
-    LOG_NP;
+    LOG_TD;
+    glDrawArrays(mode, first, count);
 };
 
 static void DrawElements(PP_Resource context,
@@ -298,27 +338,32 @@ static void DrawElements(PP_Resource context,
                        GLenum type,
                        const void* indices)
 {
-    LOG_NP;
+    LOG_TD;
+    glDrawElements(mode, count, type, indices);
 };
 
 static void Enable(PP_Resource context, GLenum cap)
 {
-    LOG_NP;
+    LOG_TD;
+    glEnable(cap);
 };
 
 static void EnableVertexAttribArray(PP_Resource context, GLuint index)
 {
-    LOG_NP;
+    LOG_TD;
+    glEnableVertexAttribArray(index);
 };
 
 static void Finish(PP_Resource context)
 {
-    LOG_NP;
+    LOG_TD;
+    glFinish();
 };
 
 static void Flush(PP_Resource context)
 {
-    LOG_NP;
+    LOG_TD;
+    glFlush();
 };
 
 static void FramebufferRenderbuffer(PP_Resource context,
@@ -327,7 +372,8 @@ static void FramebufferRenderbuffer(PP_Resource context,
                                   GLenum renderbuffertarget,
                                   GLuint renderbuffer)
 {
-    LOG_NP;
+    LOG_TD;
+    glFramebufferRenderbuffer(target, attachment, renderbuffertarget, renderbuffer);
 };
 
 static void FramebufferTexture2D(PP_Resource context,
@@ -337,39 +383,46 @@ static void FramebufferTexture2D(PP_Resource context,
                                GLuint texture,
                                GLint level)
 {
-    LOG_NP;
+    LOG_TD;
+    glFramebufferTexture2D(target, attachment, textarget, texture, level);
 };
 
 static void FrontFace(PP_Resource context, GLenum mode)
 {
-    LOG_NP;
+    LOG_TD;
+    glFrontFace(mode);
 };
 
 static void GenBuffers(PP_Resource context, GLsizei n, GLuint* buffers)
 {
-    LOG_NP;
+    LOG_TD;
+    glGenBuffers(n, buffers);
 };
 
 static void GenerateMipmap(PP_Resource context, GLenum target)
 {
-    LOG_NP;
+    LOG_TD;
+    glGenerateMipmap(target);
 };
 
 static void GenFramebuffers(PP_Resource context, GLsizei n, GLuint* framebuffers)
 {
-    LOG_NP;
+    LOG_TD;
+    glGenFramebuffers(n, framebuffers);
 };
 
 static void GenRenderbuffers(PP_Resource context,
                            GLsizei n,
                            GLuint* renderbuffers)
 {
-    LOG_NP;
+    LOG_TD;
+    glGenRenderbuffers(n, renderbuffers);
 };
 
 static void GenTextures(PP_Resource context, GLsizei n, GLuint* textures)
 {
-    LOG_NP;
+    LOG_TD;
+    glGenTextures(n, textures);
 };
 
 static void GetActiveAttrib(PP_Resource context,
@@ -381,7 +434,8 @@ static void GetActiveAttrib(PP_Resource context,
                           GLenum* type,
                           char* name)
 {
-    LOG_NP;
+    LOG_TD;
+    glGetActiveAttrib(program, index, bufsize, length, size, type, name);
 };
 
 static void GetActiveUniform(PP_Resource context,
@@ -393,7 +447,8 @@ static void GetActiveUniform(PP_Resource context,
                            GLenum* type,
                            char* name)
 {
-    LOG_NP;
+    LOG_TD;
+    glGetActiveUniform(program, index, bufsize, length, size, type, name);
 };
 
 static void GetAttachedShaders(PP_Resource context,
@@ -402,20 +457,22 @@ static void GetAttachedShaders(PP_Resource context,
                              GLsizei* count,
                              GLuint* shaders)
 {
-    LOG_NP;
+    LOG_TD;
+    glGetAttachedShaders(program, maxcount, count, shaders);
 };
 
 static GLint GetAttribLocation(PP_Resource context,
                              GLuint program,
                              const char* name)
 {
-    LOG_NP;
-    return 0;
+    LOG_TD;
+    return glGetAttribLocation(program, name);
 };
 
 static void GetBooleanv(PP_Resource context, GLenum pname, GLboolean* params)
 {
-    LOG_NP;
+    LOG_TD;
+    glGetBooleanv(pname, params);
 };
 
 static void GetBufferParameteriv(PP_Resource context,
@@ -423,17 +480,20 @@ static void GetBufferParameteriv(PP_Resource context,
                                GLenum pname,
                                GLint* params)
 {
-    LOG_NP;
+    LOG_TD;
+    glGetBufferParameteriv(target, pname, params);
 };
 
 static GLenum GetError(PP_Resource context)
 {
-    LOG_NP;
+    LOG_TD;
+    return glGetError();
 };
 
 static void GetFloatv(PP_Resource context, GLenum pname, GLfloat* params)
 {
-    LOG_NP;
+    LOG_TD;
+    glGetFloatv(pname, params);
 };
 
 static void GetFramebufferAttachmentParameteriv(PP_Resource context,
@@ -442,12 +502,14 @@ static void GetFramebufferAttachmentParameteriv(PP_Resource context,
                                               GLenum pname,
                                               GLint* params)
 {
-    LOG_NP;
+    LOG_TD;
+    glGetFramebufferAttachmentParameteriv(target, attachment, pname, params);
 };
 
 static void GetIntegerv(PP_Resource context, GLenum pname, GLint* params)
 {
-    LOG_NP;
+    LOG_TD;
+    glGetIntegerv(pname, params);
 };
 
 static void GetProgramiv(PP_Resource context,
@@ -455,7 +517,8 @@ static void GetProgramiv(PP_Resource context,
                        GLenum pname,
                        GLint* params)
 {
-    LOG_NP;
+    LOG_TD;
+    glGetProgramiv(program, pname, params);
 };
 
 static void GetProgramInfoLog(PP_Resource context,
@@ -464,7 +527,8 @@ static void GetProgramInfoLog(PP_Resource context,
                             GLsizei* length,
                             char* infolog)
 {
-    LOG_NP;
+    LOG_TD;
+    glGetProgramInfoLog(program, bufsize, length, infolog);
 };
 
 static void GetRenderbufferParameteriv(PP_Resource context,
@@ -472,7 +536,8 @@ static void GetRenderbufferParameteriv(PP_Resource context,
                                      GLenum pname,
                                      GLint* params)
 {
-    LOG_NP;
+    LOG_TD;
+    glGetRenderbufferParameteriv(target, pname, params);
 };
 
 static void GetShaderiv(PP_Resource context,
@@ -480,7 +545,8 @@ static void GetShaderiv(PP_Resource context,
                       GLenum pname,
                       GLint* params)
 {
-    LOG_NP;
+    LOG_TD;
+    glGetShaderiv(shader, pname, params);
 };
 
 static void GetShaderInfoLog(PP_Resource context,
@@ -489,7 +555,8 @@ static void GetShaderInfoLog(PP_Resource context,
                            GLsizei* length,
                            char* infolog)
 {
-    LOG_NP;
+    LOG_TD;
+    glGetShaderInfoLog(shader, bufsize, length, infolog);
 };
 
 static void GetShaderPrecisionFormat(PP_Resource context,
@@ -498,7 +565,8 @@ static void GetShaderPrecisionFormat(PP_Resource context,
                                    GLint* range,
                                    GLint* precision)
 {
-    LOG_NP;
+    LOG_TD;
+    glGetShaderPrecisionFormat(shadertype, precisiontype, range, precision);
 };
 
 static void GetShaderSource(PP_Resource context,
@@ -507,13 +575,14 @@ static void GetShaderSource(PP_Resource context,
                           GLsizei* length,
                           char* source)
 {
-    LOG_NP;
+    LOG_TD;
+    glGetShaderSource(shader, bufsize, length, source);
 };
 
 static const GLubyte* GetString(PP_Resource context, GLenum name)
 {
-    LOG_NP;
-    return 0;
+    LOG_TD;
+    return glGetString(name);
 };
 
 static void GetTexParameterfv(PP_Resource context,
@@ -521,7 +590,8 @@ static void GetTexParameterfv(PP_Resource context,
                             GLenum pname,
                             GLfloat* params)
 {
-    LOG_NP;
+    LOG_TD;
+    glGetTexParameterfv(target, pname, params);
 };
 
 static void GetTexParameteriv(PP_Resource context,
@@ -529,7 +599,8 @@ static void GetTexParameteriv(PP_Resource context,
                             GLenum pname,
                             GLint* params)
 {
-    LOG_NP;
+    LOG_TD;
+    glGetTexParameteriv(target, pname, params);
 };
 
 static void GetUniformfv(PP_Resource context,
@@ -537,7 +608,8 @@ static void GetUniformfv(PP_Resource context,
                        GLint location,
                        GLfloat* params)
 {
-    LOG_NP;
+    LOG_TD;
+    glGetUniformfv(program, location, params);
 };
 
 static void GetUniformiv(PP_Resource context,
@@ -545,15 +617,16 @@ static void GetUniformiv(PP_Resource context,
                        GLint location,
                        GLint* params)
 {
-    LOG_NP;
+    LOG_TD;
+    glGetUniformiv(program, location, params);
 };
 
 static GLint GetUniformLocation(PP_Resource context,
                               GLuint program,
                               const char* name)
 {
-    LOG_NP;
-    return 0;
+    LOG_TD;
+    return glGetUniformLocation(program, name);
 };
 
 static void GetVertexAttribfv(PP_Resource context,
@@ -561,7 +634,8 @@ static void GetVertexAttribfv(PP_Resource context,
                             GLenum pname,
                             GLfloat* params)
 {
-    LOG_NP;
+    LOG_TD;
+    glGetVertexAttribfv(index, pname, params);
 };
 
 static void GetVertexAttribiv(PP_Resource context,
@@ -569,7 +643,8 @@ static void GetVertexAttribiv(PP_Resource context,
                             GLenum pname,
                             GLint* params)
 {
-    LOG_NP;
+    LOG_TD;
+    glGetVertexAttribiv(index, pname, params);
 };
 
 static void GetVertexAttribPointerv(PP_Resource context,
@@ -577,69 +652,74 @@ static void GetVertexAttribPointerv(PP_Resource context,
                                   GLenum pname,
                                   void** pointer)
 {
-    LOG_NP;
+    LOG_TD;
+    glGetVertexAttribPointerv(index, pname, pointer);
 };
 
 static void Hint(PP_Resource context, GLenum target, GLenum mode)
 {
-    LOG_NP;
+    LOG_TD;
+    glHint(target, mode);
 };
 
 static GLboolean IsBuffer(PP_Resource context, GLuint buffer)
 {
-    LOG_NP;
-    return 0;
+    LOG_TD;
+    return glIsBuffer(buffer);
 };
 
 static GLboolean IsEnabled(PP_Resource context, GLenum cap)
 {
-    LOG_NP;
-    return 0;
+    LOG_TD;
+    return glIsEnabled(cap);
 };
 
 static GLboolean IsFramebuffer(PP_Resource context, GLuint framebuffer)
 {
-    LOG_NP;
-    return 0;
+    LOG_TD;
+    return glIsFramebuffer(framebuffer);
 };
 
 static GLboolean IsProgram(PP_Resource context, GLuint program)
 {
-    LOG_NP;
-    return 0;
+    LOG_TD;
+    return glIsProgram(program);
 };
 
 static GLboolean IsRenderbuffer(PP_Resource context, GLuint renderbuffer)
 {
-    LOG_NP;
-    return 0;
+    LOG_TD;
+    return glIsRenderbuffer(renderbuffer);
 };
 
 static GLboolean IsShader(PP_Resource context, GLuint shader)
 {
-    LOG_NP;
-    return 0;
+    LOG_TD;
+    return glIsShader(shader);
 };
 
 static GLboolean IsTexture(PP_Resource context, GLuint texture)
 {
-    LOG_NP;
-    return 0;
+    LOG_TD;
+    return glIsTexture(texture);
 };
 
 static void LineWidth(PP_Resource context, GLfloat width)
 {
-    LOG_NP;
+    LOG_TD;
+    glLineWidth(width);
 };
 
 static void LinkProgram(PP_Resource context, GLuint program)
 {
-    LOG_NP;
+    LOG_TD;
+    glLinkProgram(program);
 };
 
 static void PixelStorei(PP_Resource context, GLenum pname, GLint param)
 {
-    LOG_NP;
+    LOG_TD;
+    glPixelStorei(pname, param);
 };
 
 static void PolygonOffset(PP_Resource context, GLfloat factor, GLfloat units)
@@ -661,7 +741,8 @@ static void ReadPixels(PP_Resource context,
 
 static void ReleaseShaderCompiler(PP_Resource context)
 {
-    LOG_NP;
+    LOG_TD;
+    glReleaseShaderCompiler();
 };
 
 static void RenderbufferStorage(PP_Resource context,
@@ -670,7 +751,8 @@ static void RenderbufferStorage(PP_Resource context,
                               GLsizei width,
                               GLsizei height)
 {
-    LOG_NP;
+    LOG_TD;
+    glRenderbufferStorage(target, internalformat, width, height);
 };
 
 static void SampleCoverage(PP_Resource context, GLclampf value, GLboolean invert)
@@ -694,7 +776,8 @@ static void ShaderBinary(PP_Resource context,
                        const void* binary,
                        GLsizei length)
 {
-    LOG_NP;
+    LOG_TD;
+    glShaderBinary(n, shaders, binaryformat, binary, length);
 };
 
 static void ShaderSource(PP_Resource context,
@@ -703,12 +786,14 @@ static void ShaderSource(PP_Resource context,
                        const char** str,
                        const GLint* length)
 {
-    LOG_NP;
+    LOG_TD;
+    glShaderSource(shader, count, str, length);
 };
 
 static void StencilFunc(PP_Resource context, GLenum func, GLint ref, GLuint mask)
 {
-    LOG_NP;
+    LOG_TD;
+    glStencilFunc(func, ref, mask);
 };
 
 static void StencilFuncSeparate(PP_Resource context,
@@ -717,17 +802,20 @@ static void StencilFuncSeparate(PP_Resource context,
                               GLint ref,
                               GLuint mask)
 {
-    LOG_NP;
+    LOG_TD;
+    glStencilFuncSeparate(face, func, ref, mask);
 };
 
 static void StencilMask(PP_Resource context, GLuint mask)
 {
-    LOG_NP;
+    LOG_TD;
+    glStencilMask(mask);
 };
 
 static void StencilMaskSeparate(PP_Resource context, GLenum face, GLuint mask)
 {
-    LOG_NP;
+    LOG_TD;
+    glStencilMaskSeparate(face, mask);
 };
 
 static void StencilOp(PP_Resource context,
@@ -735,7 +823,8 @@ static void StencilOp(PP_Resource context,
                     GLenum zfail,
                     GLenum zpass)
 {
-    LOG_NP;
+    LOG_TD;
+    glStencilOp(fail, zfail, zpass);
 };
 
 static void StencilOpSeparate(PP_Resource context,
@@ -744,7 +833,8 @@ static void StencilOpSeparate(PP_Resource context,
                             GLenum zfail,
                             GLenum zpass)
 {
-    LOG_NP;
+    LOG_TD;
+    glStencilOpSeparate(face, fail, zfail, zpass);
 };
 
 static void TexImage2D(PP_Resource context,
@@ -758,7 +848,8 @@ static void TexImage2D(PP_Resource context,
                      GLenum type,
                      const void* pixels)
 {
-    LOG_NP;
+    LOG_TD;
+    glTexImage2D(target, level, internalformat, width, height, border, format, type, pixels);
 };
 
 static void TexParameterf(PP_Resource context,
@@ -766,7 +857,8 @@ static void TexParameterf(PP_Resource context,
                         GLenum pname,
                         GLfloat param)
 {
-    LOG_NP;
+    LOG_TD;
+    glTexParameterf(target, pname, param);
 };
 
 static void TexParameterfv(PP_Resource context,
@@ -774,7 +866,8 @@ static void TexParameterfv(PP_Resource context,
                          GLenum pname,
                          const GLfloat* params)
 {
-    LOG_NP;
+    LOG_TD;
+    glTexParameterfv(target, pname, params);
 };
 
 static void TexParameteri(PP_Resource context,
@@ -782,7 +875,8 @@ static void TexParameteri(PP_Resource context,
                         GLenum pname,
                         GLint param)
 {
-    LOG_NP;
+    LOG_TD;
+    glTexParameteri(target, pname, param);
 };
 
 static void TexParameteriv(PP_Resource context,
@@ -790,7 +884,8 @@ static void TexParameteriv(PP_Resource context,
                          GLenum pname,
                          const GLint* params)
 {
-    LOG_NP;
+    LOG_TD;
+    glTexParameteriv(target, pname, params);
 };
 
 static void TexSubImage2D(PP_Resource context,
@@ -804,12 +899,14 @@ static void TexSubImage2D(PP_Resource context,
                         GLenum type,
                         const void* pixels)
 {
-    LOG_NP;
+    LOG_TD;
+    glTexSubImage2D(target, level, xoffset, yoffset, width, height, format, type, pixels);
 };
 
 static void Uniform1f(PP_Resource context, GLint location, GLfloat x)
 {
-    LOG_NP;
+    LOG_TD;
+    glUniform1f(location, x);
 };
 
 static void Uniform1fv(PP_Resource context,
@@ -817,12 +914,14 @@ static void Uniform1fv(PP_Resource context,
                      GLsizei count,
                      const GLfloat* v)
 {
-    LOG_NP;
+    LOG_TD;
+    glUniform1fv(location, count, v);
 };
 
 static void Uniform1i(PP_Resource context, GLint location, GLint x)
 {
-    LOG_NP;
+    LOG_TD;
+    glUniform1i(location, x);
 };
 
 static void Uniform1iv(PP_Resource context,
@@ -830,12 +929,14 @@ static void Uniform1iv(PP_Resource context,
                      GLsizei count,
                      const GLint* v)
 {
-    LOG_NP;
+    LOG_TD;
+    glUniform1iv(location, count, v);
 };
 
 static void Uniform2f(PP_Resource context, GLint location, GLfloat x, GLfloat y)
 {
-    LOG_NP;
+    LOG_TD;
+    glUniform2f(location, x, y);
 };
 
 static  void Uniform2fv(PP_Resource context,
@@ -843,12 +944,14 @@ static  void Uniform2fv(PP_Resource context,
                      GLsizei count,
                      const GLfloat* v)
 {
-    LOG_NP;
+    LOG_TD;
+    glUniform2fv(location, count, v);
 };
 
 static void Uniform2i(PP_Resource context, GLint location, GLint x, GLint y)
 {
-    LOG_NP;
+    LOG_TD;
+    glUniform2i(location, x, y);
 };
 
 static void Uniform2iv(PP_Resource context,
@@ -856,7 +959,8 @@ static void Uniform2iv(PP_Resource context,
                      GLsizei count,
                      const GLint* v)
 {
-    LOG_NP;
+    LOG_TD;
+    glUniform2iv(location, count, v);
 };
 
 static void Uniform3f(PP_Resource context,
@@ -865,7 +969,8 @@ static void Uniform3f(PP_Resource context,
                     GLfloat y,
                     GLfloat z)
 {
-    LOG_NP;
+    LOG_TD;
+    glUniform3f(location, x, y, z);
 };
 
 static void Uniform3fv(PP_Resource context,
@@ -873,7 +978,8 @@ static void Uniform3fv(PP_Resource context,
                      GLsizei count,
                      const GLfloat* v)
 {
-    LOG_NP;
+    LOG_TD;
+    glUniform3fv(location, count, v);
 };
 
 static void Uniform3i(PP_Resource context,
@@ -882,7 +988,8 @@ static void Uniform3i(PP_Resource context,
                     GLint y,
                     GLint z)
 {
-    LOG_NP;
+    LOG_TD;
+    glUniform3i(location, x, y, z);
 };
 
 static void Uniform3iv(PP_Resource context,
@@ -890,7 +997,8 @@ static void Uniform3iv(PP_Resource context,
                      GLsizei count,
                      const GLint* v)
 {
-    LOG_NP;
+    LOG_TD;
+    glUniform3iv(location, count, v);
 };
 
 static void Uniform4f(PP_Resource context,
@@ -900,7 +1008,8 @@ static void Uniform4f(PP_Resource context,
                     GLfloat z,
                     GLfloat w)
 {
-    LOG_NP;
+    LOG_TD;
+    glUniform4f(location, x, y, z, w);
 };
 
 static void Uniform4fv(PP_Resource context,
@@ -908,7 +1017,8 @@ static void Uniform4fv(PP_Resource context,
                      GLsizei count,
                      const GLfloat* v)
 {
-    LOG_NP;
+    LOG_TD;
+    glUniform4fv(location, count, v);
 };
 
 static void Uniform4i(PP_Resource context,
@@ -918,7 +1028,8 @@ static void Uniform4i(PP_Resource context,
                     GLint z,
                     GLint w)
 {
-    LOG_NP;
+    LOG_TD;
+    glUniform4i(location, x, y, z, w);
 };
 
 static void Uniform4iv(PP_Resource context,
@@ -926,7 +1037,8 @@ static void Uniform4iv(PP_Resource context,
                      GLsizei count,
                      const GLint* v)
 {
-    LOG_NP;
+    LOG_TD;
+    glUniform4iv(location, count, v);
 };
 
 static void UniformMatrix2fv(PP_Resource context,
@@ -935,7 +1047,8 @@ static void UniformMatrix2fv(PP_Resource context,
                            GLboolean transpose,
                            const GLfloat* value)
 {
-    LOG_NP;
+    LOG_TD;
+    glUniformMatrix2fv(location, count, transpose, value);
 };
 
 static void UniformMatrix3fv(PP_Resource context,
@@ -944,7 +1057,8 @@ static void UniformMatrix3fv(PP_Resource context,
                            GLboolean transpose,
                            const GLfloat* value)
 {
-    LOG_NP;
+    LOG_TD;
+    glUniformMatrix3fv(location, count, transpose, value);
 };
 
 static void UniformMatrix4fv(PP_Resource context,
@@ -953,29 +1067,34 @@ static void UniformMatrix4fv(PP_Resource context,
                            GLboolean transpose,
                            const GLfloat* value)
 {
-    LOG_NP;
+    LOG_TD;
+    glUniformMatrix4fv(location, count, transpose, value);
 };
 
 static void UseProgram(PP_Resource context, GLuint program)
 {
-    LOG_NP;
+    LOG_TD;
+    glUseProgram(program);
 };
 
 static void ValidateProgram(PP_Resource context, GLuint program)
 {
-    LOG_NP;
+    LOG_TD;
+    glValidateProgram(program);
 };
 
 static void VertexAttrib1f(PP_Resource context, GLuint indx, GLfloat x)
 {
-    LOG_NP;
+    LOG_TD;
+    glVertexAttrib1f(indx, x);
 };
 
 static void VertexAttrib1fv(PP_Resource context,
                           GLuint indx,
                           const GLfloat* values)
 {
-    LOG_NP;
+    LOG_TD;
+    glVertexAttrib1fv(indx, values);
 };
 
 static void VertexAttrib2f(PP_Resource context,
@@ -983,14 +1102,16 @@ static void VertexAttrib2f(PP_Resource context,
                          GLfloat x,
                          GLfloat y)
 {
-    LOG_NP;
+    LOG_TD;
+    glVertexAttrib2f(indx, x, y);
 };
 
 static void VertexAttrib2fv(PP_Resource context,
                           GLuint indx,
                           const GLfloat* values)
 {
-    LOG_NP;
+    LOG_TD;
+    glVertexAttrib2fv(indx, values);
 };
 
 static void VertexAttrib3f(PP_Resource context,
@@ -999,14 +1120,16 @@ static void VertexAttrib3f(PP_Resource context,
                          GLfloat y,
                          GLfloat z)
 {
-    LOG_NP;
+    LOG_TD;
+    glVertexAttrib3f(indx, x, y, z);
 };
 
 static void VertexAttrib3fv(PP_Resource context,
                           GLuint indx,
                           const GLfloat* values)
 {
-    LOG_NP;
+    LOG_TD;
+    glVertexAttrib3fv(indx, values);
 };
 
 static void VertexAttrib4f(PP_Resource context,
@@ -1016,14 +1139,16 @@ static void VertexAttrib4f(PP_Resource context,
                          GLfloat z,
                          GLfloat w)
 {
-    LOG_NP;
+    LOG_TD;
+    glVertexAttrib4f(indx, x, y, z, w);
 };
 
 static void VertexAttrib4fv(PP_Resource context,
                           GLuint indx,
                           const GLfloat* values)
 {
-    LOG_NP;
+    LOG_TD;
+    glVertexAttrib4fv(indx, values);
 };
 
 static void VertexAttribPointer(PP_Resource context,
@@ -1034,7 +1159,8 @@ static void VertexAttribPointer(PP_Resource context,
                               GLsizei stride,
                               const void* ptr)
 {
-    LOG_NP;
+    LOG_TD;
+    glVertexAttribPointer(indx, size, type, normalized, stride, ptr);
 };
 
 static void Viewport(PP_Resource context,
@@ -1043,7 +1169,8 @@ static void Viewport(PP_Resource context,
                    GLsizei width,
                    GLsizei height)
 {
-    LOG_NP;
+    LOG_TD;
+    glViewport(x, y, width, height);
 };
 
 

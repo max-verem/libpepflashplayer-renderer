@@ -258,6 +258,8 @@ static PP_Bool DrawTextAt(PP_Resource font, PP_Resource image_data,
 
     LOG("{%d} image_data=%d, position.x=%d, position.y=%d, color=%.8X, text=[%s]",
         font, image_data, position->x, position->y, color, s);
+    LOG("{%d} image_data_is_opaque=%d, clip->point.x=%d, clip->point.y=%d, clip->size.width=%d, clip->size.height=%d",
+        font, image_data_is_opaque, clip->point.x, clip->point.y, clip->size.width, clip->size.height);
 
     return 0;
 };

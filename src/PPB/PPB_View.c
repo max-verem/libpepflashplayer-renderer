@@ -10,6 +10,8 @@
 #include <ppapi/c/ppb_view.h>
 
 #include "log.h"
+#include "res.h"
+#include "instance.h"
 
 /**
  * IsView() determines if the given resource is a valid
@@ -26,8 +28,8 @@
  */
 static PP_Bool IsView(PP_Resource resource)
 {
-    LOG_NP;
-    return 0;
+    LOG_TD;
+    return 1;
 };
 
 /**
@@ -54,8 +56,16 @@ static PP_Bool IsView(PP_Resource resource)
  */
 static PP_Bool GetRect(PP_Resource resource, struct PP_Rect* rect)
 {
-    LOG_NP;
-    return 0;
+    instance_t* inst = (instance_t*)res_private(resource);
+
+    rect->point.x = 0;
+    rect->point.y = 0;
+    rect->size.width = 1920;
+    rect->size.height = 1080;
+
+    LOG_TD;
+
+    return 1;
 };
 
 
@@ -71,8 +81,9 @@ static PP_Bool GetRect(PP_Resource resource, struct PP_Rect* rect)
  */
 static PP_Bool IsFullscreen(PP_Resource resource)
 {
-    LOG_NP;
-    return 0;
+    instance_t* inst = (instance_t*)res_private(resource);
+    LOG("inst->is_full_screen=%d", inst->is_full_screen);
+    return inst->is_full_screen;
 };
 
 /**
@@ -96,8 +107,9 @@ static PP_Bool IsFullscreen(PP_Resource resource)
  */
 static PP_Bool IsVisible(PP_Resource resource)
 {
-    LOG_NP;
-    return 0;
+    LOG_TD;
+
+    return 1;
 };
 
 
@@ -122,8 +134,9 @@ static PP_Bool IsVisible(PP_Resource resource)
  */
 static PP_Bool IsPageVisible(PP_Resource resource)
 {
-    LOG_NP;
-    return 0;
+    LOG_TD;
+
+    return 1;
 };
 
 
@@ -172,8 +185,16 @@ static PP_Bool IsPageVisible(PP_Resource resource)
  */
 static PP_Bool GetClipRect(PP_Resource resource, struct PP_Rect* clip)
 {
-    LOG_NP;
-    return 0;
+    instance_t* inst = (instance_t*)res_private(resource);
+
+    clip->point.x = 0;
+    clip->point.y = 0;
+    clip->size.width = 1920;
+    clip->size.height = 1080;
+
+    LOG_TD;
+
+    return 1;
 };
 
 
@@ -195,8 +216,8 @@ static PP_Bool GetClipRect(PP_Resource resource, struct PP_Rect* clip)
  */
 static float GetDeviceScale(PP_Resource resource)
 {
-    LOG_NP;
-    return 0;
+    LOG_TD;
+    return 1.0f;
 };
 
 
@@ -213,8 +234,8 @@ static float GetDeviceScale(PP_Resource resource)
  */
 static float GetCSSScale(PP_Resource resource)
 {
-    LOG_NP;
-    return 0;
+    LOG_TD;
+    return 1.0f;
 };
 
 
