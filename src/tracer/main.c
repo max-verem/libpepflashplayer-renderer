@@ -18,12 +18,15 @@
 #include "PPB_MessageLoop.h"
 #include "PPB_Var.h"
 
-#define SWF "demo4.swf"
+#define SWF "1080i50-blank_test_GPU.swf"
+//#define SWF "m1_logo_1080i50_BIG.swf"
+//#define SWF "m1_logo_1080i50.swf"
+//#define SWF "demo4.swf"
 //#define SWF "demo1_2_movie.swf"
 //#define SWF "demo1_2_image.swf"
 //#define SWF "demo2.swf"
 
-const char* so_name = "/usr/local/src/libpepflashplayer-renderer.git/tests/libpepflashplayer.so";
+const char* so_name = "/usr/local/src/libpepflashplayer-renderer.git/tests/libpepflashplayer.so-24.0.0.170";
 const char* local_path = "/usr/local/src/libpepflashplayer-renderer.git/tests/local";
 const char* swf_path = "file:///usr/local/src/libpepflashplayer-renderer.git/tests/src";
 const char* swf_name = SWF;

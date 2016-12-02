@@ -1,10 +1,14 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
+#include <limits.h>
+#include <sys/types.h>
+#include <unistd.h>
 
 #include <ppapi/c/ppp.h>
 #include <ppapi/c/ppp_instance.h>
 #include <ppapi/c/pp_time.h>
+#include <ppapi/c/pp_errors.h>
 #include <ppapi/c/pp_completion_callback.h>
 
 #include <ppapi/c/ppb_graphics_3d.h>
@@ -14,6 +18,7 @@
 #include "res.h"
 
 #include "PPB_Graphics3D.h"
+#include "PPB_MessageLoop.h"
 
 struct PPB_Graphics3D_1_0 PPB_Graphics3D_1_0_instance;
 
@@ -138,7 +143,7 @@ static PP_Resource Create(PP_Instance instance, PP_Resource share_context, const
         EGL_GREEN_SIZE, 8,
         EGL_BLUE_SIZE, 8,
         EGL_ALPHA_SIZE, 8,
-        EGL_DEPTH_SIZE, 24,
+        EGL_DEPTH_SIZE, 0,
         EGL_SURFACE_TYPE, EGL_PBUFFER_BIT,
         EGL_COLOR_BUFFER_TYPE, EGL_RGB_BUFFER,
         EGL_NONE
@@ -427,8 +432,18 @@ static int32_t SetAttribs(PP_Resource context, const int32_t attrib_list[])
  */
 static int32_t GetError(PP_Resource context)
 {
+    GLenum r;
+
     LOG_NP;
-    return 0;
+
+    r = glGetError();
+
+    switch(r)
+    {
+        case GL_NO_ERROR: return PP_OK;
+        case GL_OUT_OF_MEMORY: return PP_ERROR_NOMEMORY;
+        default: return PP_ERROR_CONTEXT_LOST;
+    };
 };
 
 /**
@@ -490,9 +505,31 @@ static int32_t ResizeBuffers(PP_Resource context, int32_t width, int32_t height)
  * - <code>PP_ERROR_BADARGUMENT</code> if callback is invalid.
  *
  */
+
+static int swaps = 0;
 static int32_t SwapBuffers(PP_Resource context, struct PP_CompletionCallback callback)
 {
-    LOG_NP;
+#if 0
+    FILE *f;
+    char path[PATH_MAX];
+    int gWidth = 1920, gHeight = 1080;
+    GLubyte *image = calloc(1, gWidth * gHeight * 4 * sizeof(GLubyte));
+//    graphics_3d_t* graphics_3d = (graphics_3d_t*)res_private(context);
+
+    glPixelStorei(GL_PACK_ALIGNMENT, 1);
+    glReadPixels(0, 0, gWidth, gHeight, GL_RGBA, GL_UNSIGNED_BYTE, image);
+
+    snprintf(path, sizeof(path), "/tmp/tracer-%.6d-%.6d.bin", getpid(), swaps++);
+    f = fopen(path, "wb");
+    fwrite(image, 1, gWidth * gHeight * 4, f);
+    fclose(f);
+
+    free(image);
+
+    LOG("saved [%s]", path);
+#endif
+    PPB_MessageLoop_push(0, callback, 0, PP_OK);
+
     return 0;
 };
 

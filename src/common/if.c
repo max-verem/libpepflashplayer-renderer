@@ -348,13 +348,13 @@ const void* get_browser_interface_proc(const char* interface_name)
 {
     const if_t* i;
 
-//    LOG("interface_name=[%s]", interface_name);
+    LOG("interface_name=[%s]", interface_name);
 
     i = if_find(interface_name);
 
     if(i)
     {
-//        LOG("FOUND=[%s]", interface_name);
+        LOG("FOUND=[%s]", interface_name);
         return i->ptr;
     }
 
