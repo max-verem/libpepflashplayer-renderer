@@ -54,9 +54,11 @@ libPPB_a_SOURCES = \
     PPB_VideoCapture_Dev.c \
     PPB_View.c
 
-INCLUDES = \
+AM_CPPFLAGS = \
+    @CUDA_CFLAGS@ \
     @PPAPI_CFLAGS@ \
     -I$(top_srcdir)/src/pepper_obsolete \
+    -I$(top_srcdir)/src/cuda_samples/common/inc \
     @URIPARSER_CFLAGS@ \
     @CURL_CFLAGS@ \
     @PANGOFT2_CFLAGS@ \

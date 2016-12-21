@@ -2,8 +2,8 @@ dnl
 dnl autoreconf --force --install ; ./configure ; make
 dnl
 
-AC_INIT(configure.ac)
-AM_INIT_AUTOMAKE(libpepflashplayer-renderer, 0.1)
+AC_INIT([libpepflashplayer-renderer], [0.1])
+AM_INIT_AUTOMAKE([no-dependencies foreign])
 AM_CONFIG_HEADER(config.h)
 AM_MAINTAINER_MODE
 AC_PROG_RANLIB
@@ -45,6 +45,18 @@ AC_SUBST(PEPPER_PATH)
 
 PPAPI_CFLAGS="-I$PEPPER_PATH/include"
 AC_SUBST(PPAPI_CFLAGS)
+
+AC_ARG_WITH([cuda],
+        [AS_HELP_STRING([--with-cuda=path], [path to cuda sdk])],
+        [CUDA_PATH=$withval],
+        [CUDA_PATH=/usr/local/cuda])
+AC_SUBST(CUDA_PATH)
+
+CUDA_CFLAGS="-I$CUDA_PATH/include"
+AC_SUBST(CUDA_CFLAGS)
+
+CUDA_LIBS="-L$CUDA_PATH/lib64 -lcuda -lcudart"
+AC_SUBST(CUDA_LIBS)
 
 AM_PATH_XML2(2.4.0)
 

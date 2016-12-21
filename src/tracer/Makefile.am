@@ -1,7 +1,5 @@
-AM_CFLAGS = -fms-extensions
 AM_LDFLAGS = -lm
-
-INCLUDES = \
+AM_CFLAGS = -fms-extensions \
     @PPAPI_CFLAGS@ \
     -I$(top_srcdir)/src/pepper_obsolete \
     -I$(top_srcdir)/src/PPB \
@@ -21,6 +19,7 @@ SUBDIRS = ../PPB
 
 tracer_LDADD = \
     $(top_srcdir)/src/PPB/libPPB.a \
+    @CUDA_LIBS@ \
     @PANGOFT2_LIBS@ \
     @CURL_LIBS@ \
     @URIPARSER_LIBS@ \

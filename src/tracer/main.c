@@ -18,7 +18,8 @@
 #include "PPB_MessageLoop.h"
 #include "PPB_Var.h"
 
-#define SWF "1080i50-blank_test_GPU.swf"
+#define SWF "TST-dyn_text-faded.swf"
+//#define SWF "1080i50-blank_test_GPU.swf"
 //#define SWF "m1_logo_1080i50_BIG.swf"
 //#define SWF "m1_logo_1080i50.swf"
 //#define SWF "demo4.swf"
@@ -31,8 +32,8 @@ const char* local_path = "/usr/local/src/libpepflashplayer-renderer.git/tests/lo
 const char* swf_path = "file:///usr/local/src/libpepflashplayer-renderer.git/tests/src";
 const char* swf_name = SWF;
 
-const char* argn[] = { "src", "quality", "bgcolor", "width", "height", "wmode", NULL};
-const char* argv[] = { SWF,   "high",    "#ece9d8",  "1920", "1080", "transparent", NULL};
+const char* argn[] = { /* "src", */ "quality", "bgcolor", "width", "height", "wmode", /* "flashvars", */ NULL};
+const char* argv[] = { /* SWF, */ "high",    "#ece9d8",  "1920", "1080", "transparent", /* "line1=foo_flashvars&line2=bar_flashvars", */ NULL};
 
 static void f1(void* user_data, int32_t result)
 {
@@ -65,6 +66,8 @@ LOG("instance_id=%d", instance_id);
     strncat(inst->paths.PluginInstanceURL, "/", PATH_MAX);
     strncat(inst->paths.PluginInstanceURL, swf_name, PATH_MAX);
 
+    strncat(inst->paths.PluginInstanceURL, "?line1=foo_url1&line2=bar_url2&line3=foo_url3&line4=bar_url4", PATH_MAX);
+
 //    inst->is_full_screen = 1;
     inst->is_full_frame = 1;
 
@@ -88,6 +91,7 @@ LOG("msg_loop_interface->AttachToCurrentThread=%d", r);
         r = PPB_MessageLoop_main_thread = pthread_self();
 
         mod->instance_interface->DidChangeView(inst->instance_id, inst->instance_id);
+LOG("mod->instance_interface->DidChangeView");
 
         r = mod->instance_interface->DidCreate(inst->instance_id, 6, argn, argv);
 
@@ -106,6 +110,8 @@ LOG("mod->instance_private_interface=%p", mod->instance_private_interface);
 LOG("mod->instance_interface->DidChangeView...");
 
         mod->instance_interface->DidChangeView(inst->instance_id, inst->instance_id);
+
+
 //        mod->instance_interface->DidChangeFocus(inst->instance_id, 1);
 
 LOG("mod->instance_interface->DidChangeView DONE");
@@ -143,6 +149,7 @@ LOG("mod->instance_interface->HandleDocumentLoad DONE");
             res_release(url_request_info);
         };
 
+////        mod->instance_interface->DidChangeView(inst->instance_id, inst->instance_id);
 
 LOG("Run main loop...");
         r = msg_loop_interface->Run(inst->message_loop_id);

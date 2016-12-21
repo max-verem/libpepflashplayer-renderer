@@ -20,11 +20,27 @@
 #include "PPB_Graphics3D.h"
 #include "PPB_MessageLoop.h"
 
+#include "drvapi_error_string.h"
+
 struct PPB_Graphics3D_1_0 PPB_Graphics3D_1_0_instance;
 
 static void Destructor(graphics_3d_t* graphics_3d)
 {
+    CUresult e;
+
     LOG("{%d}", graphics_3d->self);
+
+    if(CUDA_SUCCESS != (e = cuCtxPushCurrent(graphics_3d->cu_ctx)))
+        LOG("cuCtxPushCurrent failed: %s", getCudaDrvErrorString(e));
+
+    if(CUDA_SUCCESS != (e = cudaGraphicsUnregisterResource(graphics_3d->pbo_res)))
+        LOG("cudaGraphicsUnregisterResource failed: %s", getCudaDrvErrorString(e));
+
+    glDeleteBuffers(1, &graphics_3d->pbo);
+
+    if(CUDA_SUCCESS != (e = cuCtxDestroy(graphics_3d->cu_ctx)))
+        LOG("cuCtxDestroy failed: %s", getCudaDrvErrorString(e));
+
 
     if(graphics_3d->ctx && graphics_3d->dpy)
         eglDestroyContext(graphics_3d->dpy, graphics_3d->ctx);
@@ -134,6 +150,8 @@ static int32_t GetAttribMaxValue(PP_Resource instance, int32_t attribute, int32_
  */
 static PP_Resource Create(PP_Instance instance, PP_Resource share_context, const int32_t attrib_list[])
 {
+    CUresult e;
+    CUcontext cu_ctx_pop;
     int i, major, minor, num_devices = 0;
     int res = res_create(sizeof(graphics_3d_t), &PPB_Graphics3D_1_0_instance, (res_destructor_t)Destructor);
 
@@ -286,7 +304,7 @@ static PP_Resource Create(PP_Instance instance, PP_Resource share_context, const
         return 0;
     };
 
-    LOG("EGL version %d.%d\n", major, minor);
+    LOG("EGL version %d.%d", major, minor);
 
     if(!eglChooseConfig(graphics_3d->dpy, attribs, NULL, 0, &graphics_3d->nc) || graphics_3d->nc < 1)
     {
@@ -329,6 +347,43 @@ static PP_Resource Create(PP_Instance instance, PP_Resource share_context, const
     if(!eglMakeCurrent(graphics_3d->dpy, graphics_3d->pb, graphics_3d->pb, graphics_3d->ctx))
     {
         LOG("eglCreateContext failed");
+        res_release(res);
+        return 0;
+    };
+
+    if(CUDA_SUCCESS != (e = cuInit(0)))
+    {
+        LOG("cuInit failed");
+        res_release(res);
+        return 0;
+    };
+
+    if(CUDA_SUCCESS != (e = cuCtxCreate(&graphics_3d->cu_ctx, CU_CTX_BLOCKING_SYNC, graphics_3d->cu_dev)))
+    {
+        LOG("cuCtxCreate failed: %s", getCudaDrvErrorString(e));
+        res_release(res);
+        return 0;
+    };
+
+    glGenBuffers(1, &graphics_3d->pbo);
+    glBindBuffer(GL_PIXEL_UNPACK_BUFFER_ARB, graphics_3d->pbo);
+    glBufferData(GL_PIXEL_UNPACK_BUFFER_ARB, 1920 * 1080 * 4, 0, GL_STREAM_DRAW_ARB);
+    glBindBuffer(GL_PIXEL_UNPACK_BUFFER_ARB, 0);
+
+    if(CUDA_SUCCESS != (e = cudaGraphicsGLRegisterBuffer
+        (&graphics_3d->pbo_res, graphics_3d->pbo, cudaGraphicsMapFlagsWriteDiscard)))
+    {
+        LOG("cudaGraphicsGLRegisterBuffer failed: %s", getCudaDrvErrorString(e));
+        res_release(res);
+        return 0;
+    };
+
+
+//    LOG("graphics_3d->pb=%d", graphics_3d->pb);
+
+    if(CUDA_SUCCESS != (e = cuCtxPopCurrent(&cu_ctx_pop)))
+    {
+        LOG("cuCtxCreate failed: %s", getCudaDrvErrorString(e));
         res_release(res);
         return 0;
     };
@@ -509,26 +564,67 @@ static int32_t ResizeBuffers(PP_Resource context, int32_t width, int32_t height)
 static int swaps = 0;
 static int32_t SwapBuffers(PP_Resource context, struct PP_CompletionCallback callback)
 {
-#if 0
-    FILE *f;
-    char path[PATH_MAX];
+    void * devPtr;
+    size_t size;
+
+    CUresult e;
+    CUcontext cu_ctx_pop;
+
+    graphics_3d_t* graphics_3d = (graphics_3d_t*)res_private(context);
     int gWidth = 1920, gHeight = 1080;
-    GLubyte *image = calloc(1, gWidth * gHeight * 4 * sizeof(GLubyte));
+
+#if 0
 //    graphics_3d_t* graphics_3d = (graphics_3d_t*)res_private(context);
 
     glPixelStorei(GL_PACK_ALIGNMENT, 1);
     glReadPixels(0, 0, gWidth, gHeight, GL_RGBA, GL_UNSIGNED_BYTE, image);
 
-    snprintf(path, sizeof(path), "/tmp/tracer-%.6d-%.6d.bin", getpid(), swaps++);
-    f = fopen(path, "wb");
-    fwrite(image, 1, gWidth * gHeight * 4, f);
-    fclose(f);
-
-    free(image);
-
-    LOG("saved [%s]", path);
 #endif
+
+    // copy current buffer
+    glBindBuffer(GL_PIXEL_PACK_BUFFER, graphics_3d->pbo);
+    glPixelStorei(GL_PACK_ALIGNMENT, 1);
+    glReadPixels(0, 0, gWidth, gHeight, GL_BGRA, GL_UNSIGNED_BYTE, 0);
+    glBindBuffer(GL_PIXEL_PACK_BUFFER, 0);
+
+    if(CUDA_SUCCESS != (e = cuCtxPushCurrent(graphics_3d->cu_ctx)))
+        LOG("cuCtxCreate failed: %s", getCudaDrvErrorString(e));
+    if(CUDA_SUCCESS != (e = cudaGraphicsMapResources(1, &graphics_3d->pbo_res, 0)))
+        LOG("cudaGraphicsMapResources failed: %s", getCudaDrvErrorString(e));
+    if(CUDA_SUCCESS != (e = cudaGraphicsResourceGetMappedPointer(&devPtr, &size, graphics_3d->pbo_res)))
+    {
+        LOG("cudaGraphicsResourceGetMappedPointer failed: %s", getCudaDrvErrorString(e));
+
+    }
+    else
+    {
+        FILE *f;
+        char path[PATH_MAX];
+
+        LOG("cudaGraphicsResourceGetMappedPointer: devPtr=%p, size=%ld", devPtr, size);
+
+        GLubyte *image = calloc(1, size);
+
+        cudaMemcpy(image, devPtr, size, cudaMemcpyDeviceToHost);
+
+        snprintf(path, sizeof(path), "/tmp/tracer-%.6d-%.6d.bin", getpid(), swaps++);
+        f = fopen(path, "wb");
+        fwrite(image, 1, size, f);
+        fclose(f);
+
+
+        LOG("saved [%s]", path);
+
+        free(image);
+    };
+    if(CUDA_SUCCESS != (e = cudaGraphicsUnmapResources(1, &graphics_3d->pbo_res, 0)))
+        LOG("cudaGraphicsUnmapResources failed: %s", getCudaDrvErrorString(e));
+    if(CUDA_SUCCESS != (e = cuCtxPopCurrent(&cu_ctx_pop)))
+        LOG("cuCtxCreate failed: %s", getCudaDrvErrorString(e));
+
     PPB_MessageLoop_push(0, callback, 0, PP_OK);
+
+    LOG("");
 
     return 0;
 };

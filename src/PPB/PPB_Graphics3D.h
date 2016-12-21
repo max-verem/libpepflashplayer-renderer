@@ -11,6 +11,10 @@
 #include <GL/gl.h>
 #include <GL/glext.h>
 
+#include <cuda.h>
+#include <cuda_runtime.h>
+#include <cuda_gl_interop.h>
+
 typedef struct graphics_3d_desc
 {
     PP_Instance instance_id;
@@ -28,6 +32,10 @@ typedef struct graphics_3d_desc
     PFNEGLQUERYDEVICESTRINGEXTPROC _eglQueryDeviceStringEXT;
     PFNEGLGETPLATFORMDISPLAYEXTPROC _eglGetPlatformDisplayEXT;
 
+    CUcontext cu_ctx;
+    CUdevice cu_dev;
+    struct cudaGraphicsResource* pbo_res;
+    unsigned int pbo;
 } graphics_3d_t;
 
 #endif /*PPB_Graphics2D.h */
