@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <pthread.h>
+#include <time.h>
 
 #include <ppapi/c/ppp.h>
 #include <ppapi/c/ppp_instance.h>
@@ -32,12 +33,31 @@ static void ReleaseResource(PP_Resource resource)
     LOG1("res_release(%d)=%d", resource, r);
 };
 
+/**
+ * GetTime() returns the "wall clock time" according to the
+ * browser.
+ *
+ * @return A <code>PP_Time</code> containing the "wall clock time" according
+ * to the browser.
+ */
 static PP_Time GetTime(void)
 {
-    LOG_NP;
-    return 0;
+    time_t t;
+    time(&t);
+    return t;
 };
 
+/**
+ * GetTimeTicks() returns the "tick time" according to the browser.
+ * This clock is used by the browser when passing some event times to the
+ * module (e.g. using the <code>PP_InputEvent::time_stamp_seconds</code>
+ * field). It is not correlated to any actual wall clock time
+ * (like GetTime()). Because of this, it will not run change if the user
+ * changes their computer clock.
+ *
+ * @return A <code>PP_TimeTicks</code> containing the "tick time" according
+ * to the browser.
+ */
 static PP_TimeTicks GetTimeTicks(void)
 {
     LOG_NP;

@@ -18,7 +18,7 @@
 #include "PPB_MessageLoop.h"
 #include "PPB_Var.h"
 
-#define SWF "TST-dyn_text-faded.swf"
+#define SWF "as3_test3.swf"
 //#define SWF "1080i50-blank_test_GPU.swf"
 //#define SWF "m1_logo_1080i50_BIG.swf"
 //#define SWF "m1_logo_1080i50.swf"
@@ -27,7 +27,7 @@
 //#define SWF "demo1_2_image.swf"
 //#define SWF "demo2.swf"
 
-const char* so_name = "/usr/local/src/libpepflashplayer-renderer.git/tests/libpepflashplayer.so-24.0.0.170";
+const char* so_name = "/usr/local/src/libpepflashplayer-renderer.git/tests/libpepflashplayer.so-24.0.0.170-debug";
 const char* local_path = "/usr/local/src/libpepflashplayer-renderer.git/tests/local";
 const char* swf_path = "file:///usr/local/src/libpepflashplayer-renderer.git/tests/src";
 const char* swf_name = SWF;
@@ -65,8 +65,7 @@ LOG("instance_id=%d", instance_id);
     strncpy(inst->paths.PluginInstanceURL, swf_path, PATH_MAX);
     strncat(inst->paths.PluginInstanceURL, "/", PATH_MAX);
     strncat(inst->paths.PluginInstanceURL, swf_name, PATH_MAX);
-
-    strncat(inst->paths.PluginInstanceURL, "?line1=foo_url1&line2=bar_url2&line3=foo_url3&line4=bar_url4", PATH_MAX);
+    strncat(inst->paths.PluginInstanceURL, "?line1=foo_url1&line2=bar_url2&line3=foo_url3&line4=bar_url4&param1=DEMO1%20LONG%20String", PATH_MAX);
 
 //    inst->is_full_screen = 1;
     inst->is_full_frame = 1;

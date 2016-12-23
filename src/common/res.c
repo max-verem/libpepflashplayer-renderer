@@ -122,7 +122,7 @@ int res_add_ref(PP_Resource res)
 
     pthread_mutex_lock(&lock);
 
-    if(res < active.count && active.list[res])
+    if(res < active.size && active.list[res])
         r = ++active.list[res]->ref;
 
     pthread_mutex_unlock(&lock);
@@ -138,7 +138,7 @@ int res_release(PP_Resource res)
 
     pthread_mutex_lock(&lock);
 
-    if(res < active.count && active.list[res])
+    if(res < active.size && active.list[res])
     {
         r = --active.list[res]->ref;
         if(!r)
@@ -184,7 +184,7 @@ void* res_private(PP_Resource res)
 
     pthread_mutex_lock(&lock);
 
-    if(res < active.count && active.list[res])
+    if(res < active.size && active.list[res])
         priv = active.list[res]->priv;
 
     pthread_mutex_unlock(&lock);
@@ -198,7 +198,7 @@ int res_private_size(PP_Resource res)
 
     pthread_mutex_lock(&lock);
 
-    if(res < active.count && active.list[res])
+    if(res < active.size && active.list[res])
         r = active.list[res]->size;
     else
         r = -ENOENT;
@@ -214,7 +214,7 @@ void* res_interface(PP_Resource res)
 
     pthread_mutex_lock(&lock);
 
-    if(res < active.count && active.list[res])
+    if(res < active.size && active.list[res])
         interface = active.list[res]->interface;
 
     pthread_mutex_unlock(&lock);

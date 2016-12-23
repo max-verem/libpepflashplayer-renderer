@@ -124,7 +124,7 @@ static PP_Bool SetProperty(PP_Resource request,
         LOG("{%d} value=%s", request, value.value.as_bool ? "TRUE" : "FALSE");
     };
 
-    return 0;
+    return PP_TRUE;
 };
 
 /**
@@ -143,8 +143,14 @@ static PP_Bool SetProperty(PP_Resource request,
  */
 static PP_Bool AppendDataToBody(PP_Resource request, const void* data, uint32_t len)
 {
-    LOG_NP;
-    return 0;
+    url_request_info_t* url_req = (url_request_info_t*)res_private(request);
+
+    LOG("{%d} data=%p, len=%d", request, data, len);
+
+    url_req->DataToBody.data = data;
+    url_req->DataToBody.len = len;
+
+    return PP_TRUE;
 };
 
 
@@ -174,8 +180,18 @@ static PP_Bool AppendDataToBody(PP_Resource request, const void* data, uint32_t 
 static PP_Bool AppendFileToBody(PP_Resource request, PP_Resource file_ref,
     int64_t start_offset, int64_t number_of_bytes, PP_Time expected_last_modified_time)
 {
-    LOG_NP;
-    return 0;
+    url_request_info_t* url_req = (url_request_info_t*)res_private(request);
+
+    LOG("{%d}", request);
+
+    res_add_ref(file_ref);
+
+    url_req->FileToBody.file_ref = file_ref;
+    url_req->FileToBody.start_offset = start_offset;
+    url_req->FileToBody.number_of_bytes = number_of_bytes;
+    url_req->FileToBody.expected_last_modified_time = expected_last_modified_time;
+
+    return PP_TRUE;
 };
 
 struct PPB_URLRequestInfo_1_0 PPB_URLRequestInfo_1_0_instance =

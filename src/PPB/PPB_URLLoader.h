@@ -26,12 +26,22 @@ typedef struct url_loader_desc
     url_request_info_t* url_request_info;
 
     pthread_t th;
-    int f_curl, state;
+    enum url_loader_states state;
+    struct PP_CompletionCallback callback;
+
+    int f_curl;
+
+    const char* url;
 
     FILE* reader;
+    FILE* writer;
 
     int64_t bytes_received;
     int64_t total_bytes_to_be_received;
+
+    char* header_data;
+    int header_len;
+    int body_pos;
 
     struct
     {

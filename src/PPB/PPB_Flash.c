@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
+#include <time.h>
 
 #include <ppapi/c/ppp.h>
 #include <ppapi/c/ppp_instance.h>
@@ -48,10 +49,17 @@ static int32_t Navigate(PP_Resource request_info, const char* target, PP_Bool fr
     return 0;
 };
 
-static double GetLocalTimeZoneOffset(PP_Instance instance, PP_Time t)
+/**
+ * Retrieves the local time zone offset from GM time for the given UTC time.
+ */
+static double GetLocalTimeZoneOffset(PP_Instance instance, PP_Time _t)
 {
-    LOG_NP;
-    return 0;
+    struct tm tm;
+    time_t t = _t;
+
+    localtime_r(&t, &tm);
+
+    return tm.tm_gmtoff;
 };
 
 static struct PP_Var GetCommandLineArgs(PP_Module module)

@@ -2,6 +2,8 @@
 #include <stdio.h>
 #include <string.h>
 #include <sys/stat.h>
+#include <curl/curl.h>
+#include <errno.h>
 
 #include <ppapi/c/ppp.h>
 #include <ppapi/c/ppp_instance.h>
@@ -18,6 +20,7 @@
 #include "PPB_URLUtil_Dev.h"
 #include "PPB_URLRequestInfo.h"
 #include "PPB_URLLoader.h"
+#include "PPB_MessageLoop.h"
 
 static int URL_COMPONENT_EMPTY(const char* s, struct PP_URLComponent_Dev c)
 {
@@ -73,9 +76,274 @@ static int URL_COMPONENT_IS_HTTP(const char* s, struct PP_URLComponent_Dev c)
     return 1;
 };
 
+static int f_curl_global_init_done = 0;
+#define CURL_GLOBAL_INIT                        \
+    /* init curl lib */                         \
+    if(!f_curl_global_init_done)                \
+    {                                           \
+        f_curl_global_init_done = 1;            \
+        curl_global_init(CURL_GLOBAL_ALL);      \
+    }
+
+static size_t curl_read_from_buf_cb(char *ptr, size_t size, size_t nmemb, void *userdata)
+{
+    size_t n, l;
+    url_loader_t* url_loader = (url_loader_t*)userdata;
+    url_request_info_t* url_request_info = url_loader->url_request_info;
+
+    /* left */
+    n = size * nmemb;
+    l = url_request_info->DataToBody.len - url_loader->body_pos;
+
+    /* send data size */
+    n = (n < l) ? n : l;
+
+    /* copy */
+    memcpy(ptr, url_request_info->DataToBody.data + url_loader->body_pos, n);
+    LOG("{%d} url_loader->body_pos=%d, n=%d", url_loader->self, url_loader->body_pos, (int)n);
+    url_loader->body_pos += n;
+
+    return n;
+};
+
+static size_t curl_read_from_file_cb(char *ptr, size_t size, size_t nmemb, void *userdata)
+{
+    size_t n = 0;
+    url_loader_t* url_loader = (url_loader_t*)userdata;
+    url_request_info_t* url_request_info = url_loader->url_request_info;
+
+    LOG_NP;
+
+    return n;
+};
+
+static size_t curl_write_received_cb(char *ptr, size_t size, size_t nmemb, void *userdata)
+{
+    size_t n = 0;
+    url_loader_t* url_loader = (url_loader_t*)userdata;
+
+    LOG("");
+
+    if(!url_loader->writer)
+    {
+        char name[PATH_MAX];
+
+        /* build temp rss filename */
+        strncpy(name, "/tmp/PPB_URLLoader-XXXXXX", sizeof(name));
+        mktemp(name);
+
+        LOG("{%d} name=[%s]", url_loader->self, name);
+
+        url_loader->writer = fopen(name, "wb");
+
+        if(!url_loader->writer)
+        {
+            LOG("{%d} error=[%s]", url_loader->self, strerror(errno));
+            n = CURL_READFUNC_ABORT;
+            url_loader->state = URLLoader_ABORTED;
+        }
+        else
+        {
+            url_loader->reader = fopen(name, "rb");
+            url_loader->state = URLLoader_DOWNLOADING;
+            if(url_loader->header_data)
+                url_loader->response.HEADERS = VarFromUtf8(url_loader->header_data, url_loader->header_len);
+
+            PPB_MessageLoop_push(0, url_loader->callback, 0, PP_OK);
+        };
+    };
+
+    if(url_loader->writer)
+    {
+        n = fwrite(ptr, size, nmemb, url_loader->writer) * size;
+        fflush(url_loader->writer);
+
+        if(ferror(url_loader->writer))
+        {
+            n = CURL_READFUNC_ABORT;
+            LOG("{%d} ferror=[%s]", url_loader->self, strerror(errno));
+        }
+        else
+            url_loader->bytes_received += n;
+    };
+
+    LOG("{%d} size=%lld, nmemb=%lld, n=%lld", url_loader->self, size, nmemb, n);
+
+    return n;
+};
+
+static size_t curl_header_cb(char *buffer, size_t size, size_t nitems, void *userdata)
+{
+    size_t n = size * nitems;
+    url_loader_t* url_loader = (url_loader_t*)userdata;
+
+    if(!url_loader->header_data)
+        url_loader->header_data = (char*)malloc(0);
+
+    url_loader->header_data = (char*)realloc(url_loader->header_data, 1 + n + url_loader->header_len);
+    memcpy(url_loader->header_data + url_loader->header_len, buffer, n);
+    url_loader->header_len += n;
+    url_loader->header_data[url_loader->header_len] = 0;
+
+    LOG("{%d} %4d|%4d| %.*s", url_loader->self, (int)size, (int)nitems, n, buffer);
+
+    return n;
+};
+
+static int curl_xferinfo_cb(void *clientp, curl_off_t dltotal, curl_off_t dlnow, curl_off_t ultotal, curl_off_t ulnow)
+{
+    LOG("");
+
+//    url_loader_t* url_loader = (url_loader_t*)clientp;
+    return 0;
+};
+
+static int curl_progress_cb(void *clientp, double dltotal, double dlnow, double ultotal, double ulnow)
+{
+    return curl_xferinfo_cb(clientp,
+                  (curl_off_t)dltotal,
+                  (curl_off_t)dlnow,
+                  (curl_off_t)ultotal,
+                  (curl_off_t)ulnow);
+};
+
+static void* curl_downloader(void* p)
+{
+    int r;
+    CURL *curl;
+    struct curl_slist *headers_list = NULL;
+    char* curl_error_msg = NULL;
+    url_loader_t* url_loader = (url_loader_t*)p;
+    url_request_info_t* url_request_info = url_loader->url_request_info;
+
+    LOG("{%d} url=[%s]", url_loader->self, url_loader->url);
+
+    /* init curl lib */
+    CURL_GLOBAL_INIT;
+
+    /* init curl */
+    curl = curl_easy_init();
+    curl_easy_setopt(curl, CURLOPT_URL, url_loader->url);
+
+    /* get verbose debug output please */
+    curl_easy_setopt(curl, CURLOPT_VERBOSE, 1L);
+
+    /* check if it post */
+    if(url_request_info->props[PP_URLREQUESTPROPERTY_METHOD].type == PP_VARTYPE_STRING &&
+        !strcasecmp("POST", VarToUtf8(url_request_info->props[PP_URLREQUESTPROPERTY_METHOD], NULL)))
+    {
+        LOG("{%d} POST", url_loader->self);
+        curl_easy_setopt(curl, CURLOPT_POST, 1);
+    };
+
+    /* setup writer function */
+    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, curl_write_received_cb);
+    curl_easy_setopt(curl, CURLOPT_WRITEDATA, url_loader);
+
+    /* setup reader */
+    if(url_request_info->DataToBody.data)
+    {
+        curl_easy_setopt(curl, CURLOPT_READFUNCTION, curl_read_from_buf_cb);
+        curl_easy_setopt(curl, CURLOPT_READDATA, url_loader);
+        curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE, url_request_info->DataToBody.len);
+    }
+    else if(url_request_info->FileToBody.file_ref)
+    {
+        curl_easy_setopt(curl, CURLOPT_READFUNCTION, curl_read_from_file_cb);
+        curl_easy_setopt(curl, CURLOPT_READDATA, url_loader);
+        headers_list = curl_slist_append(headers_list, "Transfer-Encoding: chunked");
+    };
+
+    /* progress */
+    curl_easy_setopt(curl, CURLOPT_ERRORBUFFER, curl_error_msg = (char*)malloc(CURL_ERROR_SIZE));
+    curl_easy_setopt(curl, CURLOPT_FAILONERROR, 0);
+    curl_easy_setopt(curl, CURLOPT_NOPROGRESS, 0);
+    curl_easy_setopt(curl, CURLOPT_PROGRESSFUNCTION, curl_progress_cb);
+    curl_easy_setopt(curl, CURLOPT_PROGRESSDATA, url_loader);
+#if LIBCURL_VERSION_NUM >= 0x072000
+    curl_easy_setopt(curl, CURLOPT_XFERINFOFUNCTION, curl_xferinfo_cb);
+    curl_easy_setopt(curl, CURLOPT_XFERINFODATA, url_loader);
+#endif
+
+    /* header received */
+    curl_easy_setopt(curl, CURLOPT_HEADERFUNCTION, curl_header_cb);
+    curl_easy_setopt(curl, CURLOPT_HEADERDATA, url_loader);
+
+    /* setup headers */
+    if(url_request_info->props[PP_URLREQUESTPROPERTY_HEADERS].type == PP_VARTYPE_STRING)
+    {
+        const char *h, *t;
+        const char* headers = VarToUtf8(url_request_info->props[PP_URLREQUESTPROPERTY_HEADERS], NULL);
+
+        for(h = headers; h;)
+        {
+            char
+                *e,
+                *sr = strchr(h, '\r'),
+                *sn = strchr(h, '\n');
+
+            if(sr && sn)
+                t = (sr < sn)?sr:sn;
+            else if(sr)
+                t = sr;
+            else if(sn)
+                t = sn;
+            else
+                t = h + strlen(h);
+
+            e = strndup(h, t - h);
+
+            LOG("e=[%s]", e);
+
+            if(*e)
+            {
+                headers_list = curl_slist_append(headers_list, e);
+                h = t + 1;
+                LOG("curl_slist_append(%s)", e);
+            }
+            else
+                h = NULL;
+
+            if(e)
+                free(e);
+        };
+    };
+
+    if(headers_list)
+        curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers_list);
+
+    /* run transfer */
+    r = curl_easy_perform(curl);
+    LOG("curl_easy_perform return %d", r);
+    if(r)
+    {
+        PPB_MessageLoop_push(0, url_loader->callback, 0, PP_ERROR_FAILED);
+
+        LOG("{%d} curl_error_msg=[%s]", url_loader->self, curl_error_msg);
+
+        url_loader->state = URLLoader_ABORTED;
+    }
+    else
+        url_loader->state = URLLoader_DONE;
+
+    if(url_loader->writer)
+    {
+        fclose(url_loader->writer);
+        url_loader->writer = NULL;
+    };
+
+    curl_easy_cleanup(curl);
+
+    curl_slist_free_all(headers_list);
+
+    return NULL;
+};
+
+
 static void Destructor(url_loader_t* ctx)
 {
     LOG("{%d}", ctx->self);
+    LOG_NP;
 };
 
 struct PPB_URLLoader_1_0 PPB_URLLoader_1_0_instance;
@@ -141,13 +409,19 @@ static PP_Bool IsURLLoader(PP_Resource resource)
 static int32_t Open(PP_Resource loader, PP_Resource request_info, struct PP_CompletionCallback callback)
 {
     int curl = 0;
-    const char* url;
     struct PP_Var url_var;
     struct PP_URLComponents_Dev comp;
     url_loader_t* url_loader = (url_loader_t*)res_private(loader);
     url_request_info_t* url_request_info = (url_request_info_t*)res_private(request_info);
 
     LOG("{%d}", loader);
+
+    /* check if it not busy */
+    if(url_loader->state != URLLoader_NONE)
+    {
+        LOG("{%d} BUSY, url_loader->state=%d", loader, url_loader->state);
+        return PP_ERROR_INPROGRESS;
+    };
 
     /* parse url */
     url_var = url_request_info->props[PP_URLREQUESTPROPERTY_URL];
@@ -158,17 +432,17 @@ static int32_t Open(PP_Resource loader, PP_Resource request_info, struct PP_Comp
     };
 
     /* check if supported */
-    url = VarToUtf8(url_var, NULL);
-    uriparser_parse(url, &comp);
+    url_loader->url = VarToUtf8(url_var, NULL);
+    uriparser_parse(url_loader->url, &comp);
     if
     (
         (
-            URL_COMPONENT_EMPTY(url, comp.scheme)
+            URL_COMPONENT_EMPTY(url_loader->url, comp.scheme)
             ||
-            URL_COMPONENT_IS_FILE(url, comp.scheme)
+            URL_COMPONENT_IS_FILE(url_loader->url, comp.scheme)
         )
         &&
-        (!URL_COMPONENT_EMPTY(url, comp.path))
+        (!URL_COMPONENT_EMPTY(url_loader->url, comp.path))
     )
     {
         LOG("{%d} will try localfile", loader);
@@ -176,9 +450,9 @@ static int32_t Open(PP_Resource loader, PP_Resource request_info, struct PP_Comp
     }
     else if
     (
-        URL_COMPONENT_IS_FTP(url, comp.scheme)
+        URL_COMPONENT_IS_FTP(url_loader->url, comp.scheme)
         ||
-        URL_COMPONENT_IS_HTTP(url, comp.scheme)
+        URL_COMPONENT_IS_HTTP(url_loader->url, comp.scheme)
     )
     {
         LOG("{%d} will try curl", loader);
@@ -195,17 +469,24 @@ static int32_t Open(PP_Resource loader, PP_Resource request_info, struct PP_Comp
     res_add_ref(request_info);
     url_loader->url_request_info = url_request_info;
 
+    url_loader->total_bytes_to_be_received = 0;
+
     /* */
     if(curl)
     {
-        LOG_NP;
+        url_loader->state = URLLoader_CONNECTING;
+        url_loader->callback = callback;
+
+        pthread_create(&url_loader->th, NULL, curl_downloader, url_loader);
+
+        return PP_OK_COMPLETIONPENDING;
     }
     else
     {
         char* filename;
 
         filename = calloc(1, comp.path.len + 1);
-        memcpy(filename, url + comp.path.begin, comp.path.len);
+        memcpy(filename, url_loader->url + comp.path.begin, comp.path.len);
         url_loader->reader = fopen(filename, "rb");
         free(filename);
 
@@ -225,10 +506,11 @@ static int32_t Open(PP_Resource loader, PP_Resource request_info, struct PP_Comp
         else
             url_loader->response.STATUSCODE = PP_MakeInt32(404);
 
-        url_loader->total_bytes_to_be_received = 0;
-    };
 
-    return PP_OK; //_COMPLETIONPENDING;
+        url_loader->state = URLLoader_DONE;
+
+        return PP_OK;;
+    };
 };
 
 /**
@@ -297,6 +579,8 @@ static PP_Bool GetDownloadProgress(PP_Resource loader, int64_t* bytes_received, 
 {
     url_loader_t* url_loader = (url_loader_t*)res_private(loader);
 
+    LOG("{%d}", loader);
+
     if(!url_loader->reader)
         return 0;
 
@@ -318,6 +602,7 @@ static PP_Bool GetDownloadProgress(PP_Resource loader, int64_t* bytes_received, 
  */
 static PP_Resource GetResponseInfo(PP_Resource loader)
 {
+    LOG("{%d}", loader);
     res_add_ref(loader);
     return loader;
 };
@@ -344,7 +629,13 @@ static int32_t ReadResponseBody(PP_Resource loader, void* buffer, int32_t bytes_
     struct PP_CompletionCallback callback)
 {
     int r;
-    url_loader_t* url_loader = (url_loader_t*)res_private(loader);
+    url_loader_t* url_loader;
+
+    LOG("{%d}", loader);
+
+    url_loader = (url_loader_t*)res_private(loader);
+
+    LOG("{%d}, url_loader=%p", loader, url_loader);
 
     if(url_loader->reader)
     {
