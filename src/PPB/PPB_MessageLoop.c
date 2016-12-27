@@ -211,7 +211,7 @@ static int32_t AttachToCurrentThread(PP_Resource res)
     else
         r = PP_ERROR_INPROGRESS;
 
-    LOG("r=%d", r);
+    LOG("{%d} r=%d", res, r);
 
     return r;
 };
@@ -246,7 +246,7 @@ static int32_t Run(PP_Resource res)
 
     LOG("{%d}", res);
 
-    while(!msg_loop->f_exit)
+    while(1)
     {
         pthread_mutex_lock(&registry.lock);
 
@@ -266,16 +266,19 @@ static int32_t Run(PP_Resource res)
 
         if(item)
         {
-            LOG1("%d", res);
+            LOG1("{%d} item=%p", res, item);
 
             item->callback.func(item->callback.user_data, item->result);
 
             free(item);
             item = NULL;
         };
+
+        if(msg_loop->f_exit && !msg_loop->items)
+            break;
     };
 
-    return 0;
+    return PP_OK;
 };
 
 
@@ -334,7 +337,7 @@ int PPB_MessageLoop_push(PP_Resource message_loop, struct PP_CompletionCallback 
     /* find main thread */
     pthread_mutex_lock(&registry.lock);
 
-    LOG1("message_loop=%d", message_loop);
+//    LOG1("message_loop=%d", message_loop);
 
     /* find message loop for main thread */
     if(!message_loop)
@@ -348,7 +351,7 @@ int PPB_MessageLoop_push(PP_Resource message_loop, struct PP_CompletionCallback 
             };
     };
 
-    LOG1("message_loop=%d", message_loop);
+//    LOG1("message_loop=%d", message_loop);
 
     /* push into queue */
     if(message_loop <= 0)
@@ -359,24 +362,30 @@ int PPB_MessageLoop_push(PP_Resource message_loop, struct PP_CompletionCallback 
     else
     {
         message_loop_t* ctx = (message_loop_t*)res_private(message_loop);
-        message_loop_item_t* item = (message_loop_item_t*)calloc(1, sizeof(message_loop_item_t));
 
-        /* create item */
-        item->callback = callback;
-        item->delay_ms = delay_ms;
-        item->result = result;
-        item->now = _now_us() / 1000LL;
-        item->next = ctx->items;
+        if(ctx->f_exit)
+            r = PP_ERROR_FAILED;
+        else
+        {
+            message_loop_item_t* item = (message_loop_item_t*)calloc(1, sizeof(message_loop_item_t));
 
-        /* append it */
-        ctx->items = item;
+            /* create item */
+            item->callback = callback;
+            item->delay_ms = delay_ms;
+            item->result = result;
+            item->now = _now_us() / 1000LL;
+            item->next = ctx->items;
 
-        LOG1("{%d} msg_loop=%p, msg_loop->f_exit=%d, msg_loop->items=%p",
-            message_loop, ctx, ctx->f_exit, ctx->items);
+            /* append it */
+            ctx->items = item;
 
-        pthread_cond_signal(&ctx->cond);
+            LOG1("{%d} msg_loop=%p, msg_loop->f_exit=%d, msg_loop->items=%p",
+                message_loop, ctx, ctx->f_exit, ctx->items);
 
-        r = 0;
+            pthread_cond_signal(&ctx->cond);
+
+            r = 0;
+        };
     };
 
     pthread_mutex_unlock(&registry.lock);
@@ -409,8 +418,41 @@ int PPB_MessageLoop_push(PP_Resource message_loop, struct PP_CompletionCallback 
  */
 static int32_t PostQuit(PP_Resource message_loop, PP_Bool should_destroy)
 {
-    LOG_NP;
-    return 0;
+    int r, i;
+
+    /* find main thread */
+    pthread_mutex_lock(&registry.lock);
+
+    /* find message loop for main thread */
+    if(!message_loop)
+    {
+
+        for(r = -1, i = 0; i < registry.count && -1 == r; i++)
+            if(PPB_MessageLoop_main_thread == registry.list[i].thread)
+            {
+                message_loop = registry.list[i].msg_loop;
+                r = i;
+            };
+    };
+
+
+    /* push into queue */
+    if(message_loop <= 0)
+    {
+        r = PP_ERROR_BADRESOURCE;
+        LOG("message loop not found");
+    }
+    else
+    {
+        message_loop_t* ctx = (message_loop_t*)res_private(message_loop);
+        ctx->f_exit = 1;
+        r = 0;
+        pthread_cond_signal(&ctx->cond);
+    };
+
+    pthread_mutex_unlock(&registry.lock);
+
+    return r;
 };
 
 

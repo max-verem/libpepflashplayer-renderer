@@ -32,10 +32,14 @@
  */
 void PPB_Var_AddRef(struct PP_Var var)
 {
+    int r;
+
     if(!REFERENCABLE(var))
         return;
 
-    res_add_ref(var.value.as_id);
+    r = res_add_ref(var.value.as_id);
+
+    LOG("{%d} r=%d", (int)var.value.as_id, r);
 };
 
 /**
@@ -52,10 +56,19 @@ void PPB_Var_AddRef(struct PP_Var var)
  */
 void PPB_Var_Release(struct PP_Var var)
 {
+    int r;
+
     if(!REFERENCABLE(var))
         return;
 
-    res_release(var.value.as_id);
+    r = res_release(var.value.as_id);
+
+    LOG("{%d} r=%d", (int)var.value.as_id, r);
+
+    if(!r)
+    {
+        LOG_TD;
+    };
 };
 
 /**
@@ -94,7 +107,7 @@ struct PP_Var VarFromUtf8(const char* data, uint32_t len)
     if(len && data)
         memcpy(dst, data, len);
 
-    LOG1("data=[%s], len=%d", data, len);
+    LOG1("{%d} data=[%s], len=%d", (int)var.value.as_id, data, len);
 
     return var;
 };
@@ -121,6 +134,8 @@ struct PP_Var VarFromUtf8(const char* data, uint32_t len)
 const char* VarToUtf8(struct PP_Var var, uint32_t* len)
 {
     const char* r;
+
+    LOG("var.value.as_id=%d", (int)var.value.as_id);
 
     if(var.type != PP_VARTYPE_STRING)
     {

@@ -16,6 +16,8 @@ package com.broadcastsolutionsdesign.libpepflashplayer_renderer
     import com.broadcastsolutionsdesign.libpepflashplayer_renderer.Utils;
     import com.broadcastsolutionsdesign.libpepflashplayer_renderer.URLLoader2;
 
+    [SWF(frameRate=50)]
+
     public class as3_test3 extends MovieClip
     {
         [Embed(source="../../../res/m1-hb.ttf",
@@ -23,12 +25,16 @@ package com.broadcastsolutionsdesign.libpepflashplayer_renderer
             mimeType = "application/x-font",
             advancedAntiAliasing="true",
             embedAsCFF="false")]
+
+
         private var myEmbeddedFont:Class;
 
         private static const buildDate:String = NAMES::BuildDate;
         private static const buildHead:String = NAMES::BuildHead;
 
         private var param1:String = "";
+        private var notify_timer:Timer;
+        private var cnt:int = 0;
 
         public function as3_test3()
         {
@@ -39,6 +45,12 @@ package com.broadcastsolutionsdesign.libpepflashplayer_renderer
             processParameters();
             init();
             log("constructor finished");
+
+            addEventListener(Event.ENTER_FRAME, function(e:Event):void
+            {
+                cnt++;
+//                log("Event.ENTER_FRAME");
+            });
         }
 
         private function onStageResize(event: Event = null): void
@@ -122,6 +134,15 @@ package com.broadcastsolutionsdesign.libpepflashplayer_renderer
             );
 
             log("Load started5");
+
+
+            notify_timer = new Timer(1000);
+            notify_timer.addEventListener(TimerEvent.TIMER, function(e:TimerEvent):void
+            {
+                log("TimerEvent.TIMER, cnt=" + cnt);
+                cnt = 0;
+            });
+            notify_timer.start();
         }
 
 /*

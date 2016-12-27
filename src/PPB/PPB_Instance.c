@@ -48,7 +48,8 @@ static PP_Bool BindGraphics(PP_Instance instance, PP_Resource device)
 
     inst->graphics_id = device;
 
-    res_add_ref(device);
+    if(device)
+        res_add_ref(device);
 
     LOG("device=%d", device);
     return 1;

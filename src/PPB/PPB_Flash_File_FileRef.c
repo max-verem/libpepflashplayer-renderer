@@ -103,7 +103,7 @@ static int32_t OpenFile(PP_Instance instance, const char* path, int32_t mode, PP
 
     snprintf(dst, sizeof(dst), "%s/%s", pi->paths.Local, path);
 
-    r = open(dst, m, 0666);
+    r = open(dst, m | O_SYNC, 0666);
 
     LOG("r=%d", r);
     LOG("path=[%s]", path);

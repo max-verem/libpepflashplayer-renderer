@@ -81,6 +81,7 @@ static struct PP_Var GetFontFamilies(PP_Instance instance)
 
     g_object_unref(fontmap);
 
+    LOG("");
     r = VarFromUtf8(buf_data, buf_size);
 
     free(buf_data);
@@ -194,7 +195,10 @@ static PP_Bool Describe(PP_Resource font,
     /* family / face */
     buf = pango_font_description_get_family(desc);
     if(buf)
+    {
+        LOG("HERE: buf=[%s]", buf);
         description->face = VarFromUtf8_c(buf);
+    }
     else
         description->face = PP_MakeUndefined();
 
@@ -223,7 +227,7 @@ static PP_Bool Describe(PP_Resource font,
     pango_font_description_free(desc);
     pango_font_metrics_unref(metr);
 
-    return 0;
+    return TRUE;
 };
 
 /**

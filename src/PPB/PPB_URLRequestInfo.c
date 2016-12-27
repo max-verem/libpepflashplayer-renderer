@@ -42,6 +42,12 @@ static void Destructor(url_request_info_t* ctx)
     for(i = 0; i < PP_URLREQUESTPROPERTY_LAST; i++)
         if(ctx->props[i].type != PP_VARTYPE_UNDEFINED)
             PPB_Var_Release(ctx->props[i]);
+
+    if(ctx->DataToBody.data)
+        free(ctx->DataToBody.data);
+
+    if(ctx->FileToBody.file_ref)
+        res_release(ctx->FileToBody.file_ref);
 };
 
 struct PPB_URLRequestInfo_1_0 PPB_URLRequestInfo_1_0_instance;
@@ -64,7 +70,7 @@ static PP_Resource Create(PP_Instance instance)
     url_req->instance_id = instance;
     url_req->self = res;
 
-    LOG("res=%d", res);
+    LOG("{%d}", res);
 
     return res;
 };
@@ -147,7 +153,8 @@ static PP_Bool AppendDataToBody(PP_Resource request, const void* data, uint32_t 
 
     LOG("{%d} data=%p, len=%d", request, data, len);
 
-    url_req->DataToBody.data = data;
+    url_req->DataToBody.data = malloc(len);
+    memcpy(url_req->DataToBody.data, data, len);
     url_req->DataToBody.len = len;
 
     return PP_TRUE;

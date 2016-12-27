@@ -89,7 +89,7 @@ static PP_TimeTicks GetTimeTicks(void)
  */
 static void CallOnMainThread(int32_t delay_in_milliseconds, struct PP_CompletionCallback callback, int32_t result)
 {
-    LOG1("");
+    LOG("delay_in_milliseconds=%d, result=%d", (int)delay_in_milliseconds, (int)result);
     PPB_MessageLoop_push(0, callback, delay_in_milliseconds, result);
 };
 

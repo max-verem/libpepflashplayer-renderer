@@ -14,7 +14,7 @@ typedef struct url_request_info_desc
     struct PP_Var props[PP_URLREQUESTPROPERTY_LAST];
     struct
     {
-        const void* data;
+        void* data;
         uint32_t len;
     } DataToBody;
     struct

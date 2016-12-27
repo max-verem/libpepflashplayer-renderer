@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <pthread.h>
+#include <signal.h>
 
 #include "log.h"
 #include "mod.h"
@@ -40,6 +41,20 @@ static void f1(void* user_data, int32_t result)
     LOG_TD;
 };
 
+static struct PPB_MessageLoop_1_0* msg_loop_interface = NULL;
+int s;
+
+static void sighandler(int sig)
+{
+    int r;
+
+    LOG("");
+
+    r = msg_loop_interface->PostQuit(s, 0);
+
+    LOG("r=%d", r);
+};
+
 int main()
 {
     int r, instance_id;
@@ -73,9 +88,7 @@ LOG("instance_id=%d", instance_id);
     r = mod_load(so_name, &mod);
     if(!r)
     {
-        struct PPB_MessageLoop_1_0* msg_loop_interface =
-            (struct PPB_MessageLoop_1_0*)if_find(PPB_MESSAGELOOP_INTERFACE_1_0)->ptr;
-
+        msg_loop_interface = (struct PPB_MessageLoop_1_0*)if_find(PPB_MESSAGELOOP_INTERFACE_1_0)->ptr;
 
 LOG("mod->id=%d", mod->id);
 
@@ -150,13 +163,19 @@ LOG("mod->instance_interface->HandleDocumentLoad DONE");
 
 ////        mod->instance_interface->DidChangeView(inst->instance_id, inst->instance_id);
 
+        s = inst->message_loop_id;
+        signal (SIGINT, sighandler);
 LOG("Run main loop...");
         r = msg_loop_interface->Run(inst->message_loop_id);
 LOG("Exiting...");
-
+        PPB_Var_Release(inst->private_instance_object);
+LOG("");
         mod->instance_interface->DidDestroy(inst->instance_id);
 LOG("");
         res_release(inst->message_loop_id);
+LOG("");
+        if(inst->graphics_id)
+            res_release(inst->graphics_id);
 LOG("");
         mod_release(&mod);
 LOG("");

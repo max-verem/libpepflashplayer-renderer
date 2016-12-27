@@ -608,10 +608,11 @@ static int32_t SwapBuffers(PP_Resource context, struct PP_CompletionCallback cal
         cudaMemcpy(image, devPtr, size, cudaMemcpyDeviceToHost);
 
         snprintf(path, sizeof(path), "/tmp/tracer-%.6d-%.6d.bin", getpid(), swaps++);
+#if 0
         f = fopen(path, "wb");
         fwrite(image, 1, size, f);
         fclose(f);
-
+#endif
 
         LOG("saved [%s]", path);
 
@@ -626,7 +627,7 @@ static int32_t SwapBuffers(PP_Resource context, struct PP_CompletionCallback cal
 
     LOG("");
 
-    return 0;
+    return PP_OK;
 };
 
 /**

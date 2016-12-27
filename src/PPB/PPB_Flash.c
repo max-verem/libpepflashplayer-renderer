@@ -32,7 +32,7 @@ static PP_Bool DrawGlyphs(PP_Instance instance,
     const uint16_t glyph_indices[],
     const struct PP_Point glyph_advances[])
 {
-    LOG("");
+    LOG_NP;
     return 0;
 };
 

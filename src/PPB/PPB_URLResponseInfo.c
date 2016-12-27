@@ -29,7 +29,7 @@
 static PP_Bool IsURLResponseInfo(PP_Resource resource)
 {
     LOG_TD;
-    return 1;
+    return PP_TRUE;
 };
 
 
@@ -58,13 +58,15 @@ static struct PP_Var GetProperty(PP_Resource response, PP_URLResponseProperty pr
     };
 
     url_loader_t* url_loader = (url_loader_t*)res_private(response);
+    url_request_info_t* url_request_info = (url_request_info_t*)res_private(url_loader->request_info);
 
     LOG("property_name=[%s]", property_names[property]);
 
     switch(property)
     {
         case PP_URLRESPONSEPROPERTY_URL:
-            return url_loader->url_request_info->props[PP_URLREQUESTPROPERTY_URL];
+            PPB_Var_AddRef(url_request_info->props[PP_URLREQUESTPROPERTY_URL]);
+            return url_request_info->props[PP_URLREQUESTPROPERTY_URL];
 
         case PP_URLRESPONSEPROPERTY_REDIRECTURL:
             LOG_NP;
@@ -75,14 +77,14 @@ static struct PP_Var GetProperty(PP_Resource response, PP_URLResponseProperty pr
             break;
 
         case PP_URLRESPONSEPROPERTY_STATUSCODE:
-            return url_loader->response.STATUSCODE;
+            return PP_MakeInt32(url_loader->recv.statuscode);
 
         case PP_URLRESPONSEPROPERTY_STATUSLINE:
             LOG_NP;
             break;
 
         case PP_URLRESPONSEPROPERTY_HEADERS:
-            return url_loader->response.HEADERS;
+            return VarFromUtf8(url_loader->recv.header_buffer, url_loader->recv.header_len);
     }
 
     return PP_MakeUndefined();

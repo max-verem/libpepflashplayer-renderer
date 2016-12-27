@@ -18,6 +18,7 @@
  */
 static PP_Resource Create(PP_Instance instance)
 {
+    LOG("")
     res_add_ref(instance);
     return instance;
 };

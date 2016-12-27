@@ -33,6 +33,8 @@ static struct
     int size, count;
 } active;
 
+static int zero_fake_resource = -1;
+
 int res_begin()
 {
     pthread_mutexattr_t mta;
@@ -48,6 +50,8 @@ int res_begin()
     active.size = active.count = 0;
     active.list = malloc(0);
 
+    zero_fake_resource = res_create(0, NULL, NULL);
+
     return 0;
 };
 
@@ -55,9 +59,23 @@ static int res_destroy(PP_Resource res);
 
 int res_end()
 {
-    int i;
+    int i, c;
 
     pthread_mutex_lock(&lock);
+
+    res_release(zero_fake_resource);
+
+    LOG("------------------------ leaked resources ------------------");
+    for(c = 0, i = 0; i < active.size; i++)
+        if(active.list[i])
+        {
+            LOG("res=%d, ref=%d, size=%d, priv=%p", i,
+                active.list[i]->ref, (int)active.list[i]->size, active.list[i]->priv);
+            c++;
+        };
+    LOG("leaked: %d", c);
+    LOG("------------------------ /leaked resources -----------------");
+
 
     for(i = 0; i < active.size; i++)
         if(active.list[i])
@@ -120,6 +138,8 @@ int res_add_ref(PP_Resource res)
 {
     int r = -ENOENT;
 
+    LOG1("{%d}", res);
+
     pthread_mutex_lock(&lock);
 
     if(res < active.size && active.list[res])
@@ -134,7 +154,7 @@ int res_release(PP_Resource res)
 {
     int r = -ENOENT;
 
-    LOG1("res=%d", res);
+    LOG1("{%d}", res);
 
     pthread_mutex_lock(&lock);
 
