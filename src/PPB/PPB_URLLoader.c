@@ -562,6 +562,7 @@ static int32_t Open(PP_Resource loader, PP_Resource request_info, struct PP_Comp
 
     /* check if supported */
     url = VarToUtf8(url_request_info->props[PP_URLREQUESTPROPERTY_URL], NULL);
+    LOG_N("{%d} url=[%s]", loader, url);
     uriparser_parse(url, &comp);
     if
     (
@@ -581,9 +582,8 @@ static int32_t Open(PP_Resource loader, PP_Resource request_info, struct PP_Comp
         filename = calloc(1, comp.path.len + 1);
         memcpy(filename, url + comp.path.begin, comp.path.len);
         url_loader->reader = fopen(filename, "rb");
-        free(filename);
 
-        LOG_N("{%d} filename=[%s]", loader, filename);
+        LOG_N("{%d} filename=[%s], url_loader->reader=[%p]", loader, filename, url_loader->reader);
 
         if(url_loader->reader)
         {
@@ -606,6 +606,8 @@ static int32_t Open(PP_Resource loader, PP_Resource request_info, struct PP_Comp
         };
 
         url_loader->state = URLLoader_DONE;
+
+        free(filename);
 
         return PP_OK;;
     }

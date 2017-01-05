@@ -11,46 +11,44 @@
 #include "instance.h"
 #include "if.h"
 
-#include <ppapi/c/ppb_message_loop.h>
-#include <ppapi/c/ppb_url_loader.h>
-#include <ppapi/c/ppb_url_request_info.h>
-#include <ppapi/c/ppb_view.h>
-
 #include "PPB_MessageLoop.h"
 #include "PPB_Var.h"
 
-#define SWF "as3_test3.swf"
-//#define SWF "1080i50-blank_test_GPU.swf"
-//#define SWF "m1_logo_1080i50_BIG.swf"
-//#define SWF "m1_logo_1080i50.swf"
-//#define SWF "demo4.swf"
-//#define SWF "demo1_2_movie.swf"
-//#define SWF "demo1_2_image.swf"
-//#define SWF "demo2.swf"
+#define SWF_ARGS "line1=foo_url1&line2=bar_url2&line3=foo_url3&line4=bar_url4&param1=DEMO1%20LONG%20String"
+#define SWF_PATH "file:///usr/local/src/libpepflashplayer-renderer.git/tests/src"
+#define SWF_NAME "m1-lowerThird-1080i50.swf"
+//#define SWF_NAME "as3_test3.swf"
+//#define SWF_NAME "1080i50-blank_test_GPU.swf"
+//#define SWF_NAME "m1_logo_1080i50_BIG.swf"
+//#define SWF_NAME "m1_logo_1080i50.swf"
+//#define SWF_NAME "demo4.swf"
+//#define SWF_NAME "demo1_2_movie.swf"
+//#define SWF_NAME "demo1_2_image.swf"
+//#define SWF_NAME "demo2.swf"
 
 const char* so_name = "/usr/local/src/libpepflashplayer-renderer.git/tests/libpepflashplayer.so-24.0.0.186-debug";
 const char* local_path = "/usr/local/src/libpepflashplayer-renderer.git/tests/local";
-const char* swf_path = "file:///usr/local/src/libpepflashplayer-renderer.git/tests/src";
-const char* swf_name = SWF;
 
-const char* argn[] = { /* "src", */ "quality", "bgcolor", "width", "height", "wmode", /* "flashvars", */ NULL};
-const char* argv[] = { /* SWF, */ "high",    "#ece9d8",  "1920", "1080", "transparent", /* "line1=foo_flashvars&line2=bar_flashvars", */ NULL};
+const char* argn[] = { /* "src", */ "quality", /* "bgcolor", "width", "height",*/ "wmode", /* "flashvars", */ NULL};
+const char* argv[] = { /* SWF, */ "high", /* "#ece9d8",  "1920", "1080", */"transparent", /* "line1=foo_flashvars&line2=bar_flashvars", */ NULL};
 
 static void f1(void* user_data, int32_t result)
 {
     LOG_TD;
 };
 
-static struct PPB_MessageLoop_1_0* msg_loop_interface = NULL;
-int s;
+static mod_t* mod = NULL;
+
+instance_t* inst = NULL;
 
 static void sighandler(int sig)
 {
-    int r;
+    int r = -1;
 
     LOG_N("sig=%d", sig);
 
-    r = msg_loop_interface->PostQuit(s, 0);
+    if(mod && inst)
+        r = mod->interface.message_loop->PostQuit(inst->message_loop_id, 0);
 
     LOG_N("r=%d", r);
 };
@@ -58,8 +56,8 @@ static void sighandler(int sig)
 int main()
 {
     int r, instance_id;
-    mod_t* mod;
-    instance_t* inst;
+
+//    log_level(100);
 
 //    struct PP_URLComponents_Dev comp;
 //    uriparser_parse("http://root:@demo1.com:1232/ho/ms/com?bla=123#paper", &comp);
@@ -76,85 +74,76 @@ LOG_N("instance_id=%d", instance_id);
 
     /* setup arguments */
     strncpy(inst->paths.Local, local_path, PATH_MAX);
-    strncpy(inst->paths.DocumentURL, swf_path, PATH_MAX);
-    strncpy(inst->paths.PluginInstanceURL, swf_path, PATH_MAX);
-    strncat(inst->paths.PluginInstanceURL, "/", PATH_MAX);
-    strncat(inst->paths.PluginInstanceURL, swf_name, PATH_MAX);
-    strncat(inst->paths.PluginInstanceURL, "?line1=foo_url1&line2=bar_url2&line3=foo_url3&line4=bar_url4&param1=DEMO1%20LONG%20String", PATH_MAX);
-
-//    inst->is_full_screen = 1;
+    strncpy(inst->paths.DocumentURL, SWF_PATH, PATH_MAX);
+    strncpy(inst->paths.PluginInstanceURL, SWF_PATH "/" SWF_NAME "?" SWF_ARGS, PATH_MAX);
+    inst->width = 1920;
+    inst->height = 1080;
+    inst->is_full_screen = 0;
     inst->is_full_frame = 1;
 
-    r = mod_load(so_name, &mod);
+    /* load module */
+    r = mod_load(&mod, so_name);
     if(!r)
     {
-        msg_loop_interface = (struct PPB_MessageLoop_1_0*)if_find(PPB_MESSAGELOOP_INTERFACE_1_0)->ptr;
-
 LOG_N("mod->id=%d", mod->id);
 
-        inst->message_loop_id = msg_loop_interface->Create(inst->instance_id);
+        inst->message_loop_id = mod->interface.message_loop->Create(inst->instance_id);
 
 LOG_N("inst->message_loop_id=%d", inst->message_loop_id);
 
-        r = msg_loop_interface->AttachToCurrentThread(inst->message_loop_id);
+        r = mod->interface.message_loop->AttachToCurrentThread(inst->message_loop_id);
 
 LOG_N("msg_loop_interface->AttachToCurrentThread=%d", r);
 
         r = PPB_MessageLoop_main_thread = pthread_self();
 
-        mod->instance_interface->DidChangeView(inst->instance_id, inst->instance_id);
-LOG_N("mod->instance_interface->DidChangeView");
+LOG_N("mod->instance_interface->DidChangeView....");
+//        mod->instance_interface->DidChangeView(inst->instance_id, inst->instance_id);
+LOG_N("mod->instance_interface->DidChangeView DONE");
 
-        r = mod->instance_interface->DidCreate(inst->instance_id, 6, argn, argv);
-
+LOG_N("mod->instance_interface->DidCreate.....");
+        r = mod->interface.instance->DidCreate(inst->instance_id, 2, argn, argv);
 LOG_N("mod->instance_interface->DidCreate=%d", r);
 
-        mod->instance_private_interface = (struct PPP_Instance_Private_0_1*)mod->PPP_GetInterface(PPP_INSTANCE_PRIVATE_INTERFACE_0_1);
-        if(mod->instance_private_interface && mod->instance_private_interface->GetInstanceObject)
+        mod->interface.instance_private =
+            (struct PPP_Instance_Private_0_1*)mod->PPP_GetInterface(PPP_INSTANCE_PRIVATE_INTERFACE_0_1);
+        if(mod->interface.instance_private && mod->interface.instance_private->GetInstanceObject)
         {
-            inst->private_instance_object = mod->instance_private_interface->GetInstanceObject(inst->instance_id);
+            inst->private_instance_object = mod->interface.instance_private->GetInstanceObject(inst->instance_id);
         }
         else
             inst->private_instance_object = PP_MakeUndefined();
 
-LOG_N("mod->instance_private_interface=%p", mod->instance_private_interface);
+LOG_N("mod->instance_private_interface=%p, inst->private_instance_object", mod->interface.instance_private);
 
 LOG_N("mod->instance_interface->DidChangeView...");
-
-        mod->instance_interface->DidChangeView(inst->instance_id, inst->instance_id);
-
+        mod->interface.instance->DidChangeView(inst->instance_id, inst->instance_id);
+LOG_N("mod->instance_interface->DidChangeView DONE");
 
 //        mod->instance_interface->DidChangeFocus(inst->instance_id, 1);
-
-LOG_N("mod->instance_interface->DidChangeView DONE");
+//LOG_N("mod->instance_interface->DidChangeView DONE");
 
         if(inst->is_full_frame)
         {
             struct PP_Var str;
 
-            struct PPB_URLLoader_1_0* url_loader_interface =
-                (struct PPB_URLLoader_1_0*)if_find(PPB_URLLOADER_INTERFACE_1_0)->ptr;
+            int url_loader = mod->interface.url_loader->Create(inst->instance_id);
 
-            struct PPB_URLRequestInfo_1_0* url_request_info_interface =
-                (struct PPB_URLRequestInfo_1_0*)if_find(PPB_URLREQUESTINFO_INTERFACE_1_0)->ptr;
-
-
-            int url_loader = url_loader_interface->Create(inst->instance_id);
-
-            int url_request_info = url_request_info_interface->Create(inst->instance_id);
+            int url_request_info = mod->interface.url_request_info->Create(inst->instance_id);
 
             str = VarFromUtf8_c(inst->paths.PluginInstanceURL);
-            url_request_info_interface->SetProperty(url_request_info, PP_URLREQUESTPROPERTY_URL, str);
+
+            mod->interface.url_request_info->SetProperty(url_request_info, PP_URLREQUESTPROPERTY_URL, str);
             PPB_Var_Release(str);
 
             str = VarFromUtf8_c("GET");
-            url_request_info_interface->SetProperty(url_request_info, PP_URLREQUESTPROPERTY_METHOD, str);
+            mod->interface.url_request_info->SetProperty(url_request_info, PP_URLREQUESTPROPERTY_METHOD, str);
             PPB_Var_Release(str);
 
-            url_loader_interface->Open(url_loader, url_request_info, PP_MakeCompletionCallback(f1, NULL));
+            mod->interface.url_loader->Open(url_loader, url_request_info, PP_MakeCompletionCallback(f1, NULL));
 
 LOG_N("mod->instance_interface->HandleDocumentLoad...");
-            mod->instance_interface->HandleDocumentLoad(inst->instance_id, url_loader);
+            mod->interface.instance->HandleDocumentLoad(inst->instance_id, url_loader);
 LOG_N("mod->instance_interface->HandleDocumentLoad DONE");
 
             res_release(url_loader);
@@ -163,14 +152,15 @@ LOG_N("mod->instance_interface->HandleDocumentLoad DONE");
 
 ////        mod->instance_interface->DidChangeView(inst->instance_id, inst->instance_id);
 
-        s = inst->message_loop_id;
-        signal (SIGINT, sighandler);
+        signal(SIGINT, sighandler);
+
 LOG_N("Run main loop...");
-        r = msg_loop_interface->Run(inst->message_loop_id);
+        r = mod->interface.message_loop->Run(inst->message_loop_id);
 LOG_N("Exiting...");
+
         PPB_Var_Release(inst->private_instance_object);
 LOG_PL;
-        mod->instance_interface->DidDestroy(inst->instance_id);
+        mod->interface.instance->DidDestroy(inst->instance_id);
 LOG_PL;
         res_release(inst->message_loop_id);
 LOG_PL;

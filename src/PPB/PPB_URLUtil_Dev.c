@@ -28,6 +28,16 @@ void uriparser_parse(const char* url, struct PP_URLComponents_Dev* comp)
     memset(&uri, 0, sizeof(uri));
     memset(&state, 0, sizeof(state));
 
+    if(comp)
+        comp->scheme =
+        comp->username =
+        comp->password =
+        comp->host =
+        comp->port =
+        comp->path =
+        comp->query =
+        comp->ref = und;
+
     state.uri = &uri;
     r = uriParseUriA(&state, url);
     LOG_D("uriParseUriA(%p=%s)=%d", url, url, r);
@@ -109,8 +119,11 @@ void uriparser_parse(const char* url, struct PP_URLComponents_Dev* comp)
 
     LOG_D("username=[%d,%d]", comp->username.begin, comp->username.len);
     LOG_D("password=[%d,%d]", comp->password.begin, comp->password.len);
-    LOG_D("uri.pathHead->text.first=%p, uri.pathTail->text.afterLast=%p",
-        uri.pathHead->text.first, uri.pathTail->text.afterLast);
+
+    if(uri.pathHead)
+        LOG_D("uri.pathHead->text.first=%p", uri.pathHead->text.first);
+    if(uri.pathTail)
+        LOG_D("uri.pathTail->text.afterLast=%p", uri.pathTail->text.afterLast);
 
     if(uri.pathHead && (uri.pathHead->text.first != uri.pathHead->text.afterLast))
     {

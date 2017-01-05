@@ -4,6 +4,7 @@
 #include <limits.h>
 #include <sys/types.h>
 #include <unistd.h>
+#include <time.h>
 
 #include <ppapi/c/ppp.h>
 #include <ppapi/c/ppp_instance.h>
@@ -580,9 +581,13 @@ static int32_t SwapBuffers(PP_Resource context, struct PP_CompletionCallback cal
 
     // copy current buffer
     glBindBuffer(GL_PIXEL_PACK_BUFFER, graphics_3d->pbo);
+    LOG_N("glBindBuffer(%d) done", graphics_3d->pbo);
     glPixelStorei(GL_PACK_ALIGNMENT, 1);
+    LOG_N("glReadPixels(pbo=%d)...", graphics_3d->pbo);
     glReadPixels(0, 0, gWidth, gHeight, GL_BGRA, GL_UNSIGNED_BYTE, 0);
+    LOG_N("glReadPixels done");
     glBindBuffer(GL_PIXEL_PACK_BUFFER, 0);
+    LOG_N("glBindBuffer(0) done");
 
     if(CUDA_SUCCESS != (e = cuCtxPushCurrent(graphics_3d->cu_ctx)))
         LOG_E("cuCtxCreate failed: %s", getCudaDrvErrorString(e));
@@ -595,13 +600,22 @@ static int32_t SwapBuffers(PP_Resource context, struct PP_CompletionCallback cal
     else
     {
         FILE *f;
+        int64_t t1, t2;
         char path[PATH_MAX];
-
-        LOG_N("cudaGraphicsResourceGetMappedPointer: devPtr=%p, size=%ld", devPtr, size);
+        struct timespec T1, T2;
 
         GLubyte *image = calloc(1, size);
 
-        cudaMemcpy(image, devPtr, size, cudaMemcpyDeviceToHost);
+        LOG_N("cudaGraphicsResourceGetMappedPointer: devPtr=%p, size=%ld", devPtr, size);
+
+        clock_gettime(CLOCK_MONOTONIC, &T1);
+//        cudaMemcpy(image, devPtr, size, cudaMemcpyDeviceToHost);
+        clock_gettime(CLOCK_MONOTONIC, &T2);
+
+        t1 = T1.tv_sec * 1000000000LL + T1.tv_nsec * 1LL;
+        t2 = T2.tv_sec * 1000000000LL + T2.tv_nsec * 1LL;
+
+        LOG_N("cudaMemcpy: %d ns", (int)(t2 - t1));
 
         snprintf(path, sizeof(path), "/tmp/tracer-%.6d-%.6d.bin", getpid(), swaps++);
 #if 0
@@ -609,7 +623,6 @@ static int32_t SwapBuffers(PP_Resource context, struct PP_CompletionCallback cal
         fwrite(image, 1, size, f);
         fclose(f);
 #endif
-
         LOG_N("saved [%s]", path);
 
         free(image);
@@ -621,7 +634,7 @@ static int32_t SwapBuffers(PP_Resource context, struct PP_CompletionCallback cal
 
     r = PPB_MessageLoop_push(0, callback, 0, PP_OK);
 
-    LOG_T("PPB_MessageLoop_push=%d", r);
+    LOG_N("PPB_MessageLoop_push'ed=%d", r);
 
     return PP_OK;
 };

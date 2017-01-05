@@ -10,6 +10,10 @@
 
 #include <ppapi/c/ppp_instance.h>
 #include <ppapi/c/private/ppp_instance_private.h>
+#include <ppapi/c/ppb_message_loop.h>
+#include <ppapi/c/ppb_url_loader.h>
+#include <ppapi/c/ppb_url_request_info.h>
+#include <ppapi/c/ppb_view.h>
 
 typedef struct mod_desc
 {
@@ -17,11 +21,17 @@ typedef struct mod_desc
     void *handle;
     int32_t (*PPP_InitializeModule)(PP_Module module, PPB_GetInterface get_browser_interface);
     const void * (*PPP_GetInterface)(const char* interface_name);
-    const struct PPP_Instance_1_1* instance_interface;
-    const struct PPP_Instance_Private_0_1* instance_private_interface;
+    struct
+    {
+        const struct PPP_Instance_1_1* instance;
+        const struct PPP_Instance_Private_0_1* instance_private;
+        const struct PPB_MessageLoop_1_0* message_loop;
+        const struct PPB_URLLoader_1_0* url_loader;
+        const struct PPB_URLRequestInfo_1_0* url_request_info;
+    } interface;
 } mod_t;
 
-int mod_load(const char* so_name, mod_t** pmod);
+int mod_load(mod_t** pmod, const char* so_name);
 int mod_release(mod_t** pmod);
 
 #endif

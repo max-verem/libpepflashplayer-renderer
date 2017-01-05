@@ -17,7 +17,7 @@ static void mod_destructor(void* p)
         dlclose(mod->handle);
 };
 
-int mod_load(const char* so_name, mod_t** pmod)
+int mod_load(mod_t** pmod, const char* so_name)
 {
     int r = 0;
 
@@ -39,10 +39,25 @@ int mod_load(const char* so_name, mod_t** pmod)
             r = mod->PPP_InitializeModule(mod_id, get_browser_interface_proc);
             if(!r)
             {
-                mod->instance_interface = mod->PPP_GetInterface(PPP_INSTANCE_INTERFACE_1_1);
-                if(mod->instance_interface)
+                mod->interface.instance = mod->PPP_GetInterface(PPP_INSTANCE_INTERFACE_1_1);
+                if(mod->interface.instance)
                 {
                     *pmod = mod;
+
+                    /* load interfaces */
+
+                    mod->interface.message_loop =
+                        (struct PPB_MessageLoop_1_0*)if_find(PPB_MESSAGELOOP_INTERFACE_1_0)->ptr;
+
+                    mod->interface.instance_private =
+                        (struct PPP_Instance_Private_0_1*)mod->PPP_GetInterface(PPP_INSTANCE_PRIVATE_INTERFACE_0_1);
+
+                    mod->interface.url_loader =
+                        (struct PPB_URLLoader_1_0*)if_find(PPB_URLLOADER_INTERFACE_1_0)->ptr;
+
+                    mod->interface.url_request_info =
+                        (struct PPB_URLRequestInfo_1_0*)if_find(PPB_URLREQUESTINFO_INTERFACE_1_0)->ptr;
+
                     return 0;
                 }
                 else
