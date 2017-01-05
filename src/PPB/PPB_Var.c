@@ -39,7 +39,7 @@ void PPB_Var_AddRef(struct PP_Var var)
 
     r = res_add_ref(var.value.as_id);
 
-    LOG("{%d} r=%d", (int)var.value.as_id, r);
+    LOG_T("{%d} r=%d", (int)var.value.as_id, r);
 };
 
 /**
@@ -63,11 +63,10 @@ void PPB_Var_Release(struct PP_Var var)
 
     r = res_release(var.value.as_id);
 
-    LOG("{%d} r=%d", (int)var.value.as_id, r);
+    LOG_T("{%d} r=%d", (int)var.value.as_id, r);
 
     if(!r)
     {
-        LOG_TD;
     };
 };
 
@@ -107,7 +106,7 @@ struct PP_Var VarFromUtf8(const char* data, uint32_t len)
     if(len && data)
         memcpy(dst, data, len);
 
-    LOG1("{%d} data=[%s], len=%d", (int)var.value.as_id, data, len);
+    LOG_T("{%d} data=[%s], len=%d", (int)var.value.as_id, data, len);
 
     return var;
 };
@@ -135,11 +134,11 @@ const char* VarToUtf8(struct PP_Var var, uint32_t* len)
 {
     const char* r;
 
-    LOG("var.value.as_id=%d", (int)var.value.as_id);
+    LOG_T("var.value.as_id=%d", (int)var.value.as_id);
 
     if(var.type != PP_VARTYPE_STRING)
     {
-        LOG("var.type != PP_VARTYPE_STRING");
+        LOG_E("var.type != PP_VARTYPE_STRING");
         if(len)
             *len = 0;
         return NULL;
@@ -149,7 +148,7 @@ const char* VarToUtf8(struct PP_Var var, uint32_t* len)
     if(len)
         *len = res_private_size(var.value.as_id) - 1;
 
-    LOG1("r=[%s], *len=%d, strlen=%zd", r, (len)?(*len):0, strlen(r));
+    LOG_T("r=[%s], *len=%d, strlen=%zd", r, (len)?(*len):0, strlen(r));
 
     return r;
 };
@@ -175,7 +174,7 @@ static PP_Resource VarToResource(struct PP_Var var)
 
     res_add_ref(res);
 
-    LOG("res=%d", res);
+    LOG_T("res=%d", res);
 
     return res;
 };
@@ -200,7 +199,7 @@ struct PP_Var VarFromResource(PP_Resource resource)
     var.value.as_id = resource;
     res_add_ref(resource);
 
-    LOG("resource=%d", resource);
+    LOG_T("resource=%d", resource);
 
     return var;
 };

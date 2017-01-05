@@ -81,7 +81,6 @@ static struct PP_Var GetFontFamilies(PP_Instance instance)
 
     g_object_unref(fontmap);
 
-    LOG("");
     r = VarFromUtf8(buf_data, buf_size);
 
     free(buf_data);
@@ -93,7 +92,7 @@ struct PPB_BrowserFont_Trusted_1_0 PPB_BrowserFont_Trusted_1_0_instance;
 
 static void Destructor(browser_font_trusted_t* ctx)
 {
-    LOG("{%d}", ctx->self);
+    LOG_T("{%d}", ctx->self);
 };
 
 /**
@@ -107,18 +106,20 @@ static PP_Resource Create(PP_Instance instance, const struct PP_BrowserFont_Trus
 
     browser_font_trusted_t* font = (browser_font_trusted_t*)res_private(res);
 
+#ifndef GLIB_VERSION_2_36
     g_type_init();
+#endif
 
     font->instance_id = instance;
     font->self = res;
     font->description = *description;
 
-    LOG("res=%d, description->size=%d", res, description->size);
+    LOG_D("res=%d, description->size=%d", res, description->size);
 
     /* get description */
     if(description->face.type == PP_VARTYPE_STRING)
     {
-        LOG("{%d} description->face=[%s]", res, VarToUtf8(description->face, NULL));
+        LOG_D("{%d} description->face=[%s]", res, VarToUtf8(description->face, NULL));
 
         desc = pango_font_description_from_string(VarToUtf8(description->face, NULL));
     }
@@ -127,7 +128,7 @@ static PP_Resource Create(PP_Instance instance, const struct PP_BrowserFont_Trus
         static const char* families[PP_BROWSERFONT_TRUSTED_FAMILY_MONOSPACE + 1] =
             {"normal", "serif", "sans", "monospace"};
 
-        LOG("{%d} description->family=[%d]->[%s]", res, description->family, families[description->family]);
+        LOG_D("{%d} description->family=[%d]->[%s]", res, description->family, families[description->family]);
 
         desc = pango_font_description_new();
         pango_font_description_set_family(desc, "serif");
@@ -140,10 +141,10 @@ static PP_Resource Create(PP_Instance instance, const struct PP_BrowserFont_Trus
     pango_font_description_set_variant(desc, description->small_caps ? PANGO_VARIANT_SMALL_CAPS : PANGO_VARIANT_NORMAL);
 
     /* get fontmap */
-    font->fontmap = (PangoFT2FontMap*)pango_ft2_font_map_new();
+    font->fontmap = (/*PangoFT2FontMap*/PangoFontMap*)pango_ft2_font_map_new();
 
     /* get context */
-    font->context = pango_ft2_font_map_create_context(font->fontmap);
+    font->context = /*pango_ft2_font_map_create_context*/pango_font_map_create_context(font->fontmap);
 
     /* load it */
     font->font = pango_context_load_font(font->context, desc);
@@ -196,7 +197,7 @@ static PP_Bool Describe(PP_Resource font,
     buf = pango_font_description_get_family(desc);
     if(buf)
     {
-        LOG("HERE: buf=[%s]", buf);
+        LOG_D("HERE: buf=[%s]", buf);
         description->face = VarFromUtf8_c(buf);
     }
     else
@@ -204,7 +205,7 @@ static PP_Bool Describe(PP_Resource font,
 
     /* size */
     description->size = pango_font_description_get_size(desc) / PANGO_SCALE;
-    LOG("{%d} description->size=%d", font, description->size);
+    LOG_D("{%d} description->size=%d", font, description->size);
 
     /* weight */
     description->weight = pango_font_description_get_weight(desc)/100 - 1;
@@ -260,9 +261,9 @@ static PP_Bool DrawTextAt(PP_Resource font, PP_Resource image_data,
     if(text->text.type == PP_VARTYPE_STRING)
         s = VarToUtf8(text->text, &len);
 
-    LOG("{%d} image_data=%d, position.x=%d, position.y=%d, color=%.8X, text=[%s]",
+    LOG_D("{%d} image_data=%d, position.x=%d, position.y=%d, color=%.8X, text=[%s]",
         font, image_data, position->x, position->y, color, s);
-    LOG("{%d} image_data_is_opaque=%d, clip->point.x=%d, clip->point.y=%d, clip->size.width=%d, clip->size.height=%d",
+    LOG_D("{%d} image_data_is_opaque=%d, clip->point.x=%d, clip->point.y=%d, clip->size.width=%d, clip->size.height=%d",
         font, image_data_is_opaque, clip->point.x, clip->point.y, clip->size.width, clip->size.height);
 
     return 0;
@@ -302,7 +303,7 @@ static int32_t MeasureText(PP_Resource font, const struct PP_BrowserFont_Trusted
 
     pango_layout_get_pixel_size(layout, &width, &height);
 
-    LOG("{%d} text->text=[%s] width=%d", font, s, width);
+    LOG_D("{%d} text->text=[%s] width=%d", font, s, width);
 
     /* free it */
     pango_font_description_free(desc);

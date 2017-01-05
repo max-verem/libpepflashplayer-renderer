@@ -65,16 +65,16 @@ int res_end()
 
     res_release(zero_fake_resource);
 
-    LOG("------------------------ leaked resources ------------------");
+    LOG_N("------------------------ leaked resources ------------------");
     for(c = 0, i = 0; i < active.size; i++)
         if(active.list[i])
         {
-            LOG("res=%d, ref=%d, size=%d, priv=%p", i,
+            LOG_N("res=%d, ref=%d, size=%d, priv=%p", i,
                 active.list[i]->ref, (int)active.list[i]->size, active.list[i]->priv);
             c++;
         };
-    LOG("leaked: %d", c);
-    LOG("------------------------ /leaked resources -----------------");
+    LOG_N("leaked: %d", c);
+    LOG_N("------------------------ /leaked resources -----------------");
 
 
     for(i = 0; i < active.size; i++)
@@ -97,7 +97,7 @@ PP_Resource res_create(size_t private_size, void* interface, res_destructor_t de
     PP_Resource res = 0;
     res_t* r = calloc(1, sizeof(res_t));
 
-    LOG1("private_size=%zd", private_size);
+    LOG_T("private_size=%zd", private_size);
 
     r->ref = 1;
     r->priv = calloc(1, private_size);
@@ -129,7 +129,7 @@ PP_Resource res_create(size_t private_size, void* interface, res_destructor_t de
 
     pthread_mutex_unlock(&lock);
 
-    LOG1("private_size=%zd, res=%d", private_size, res);
+    LOG_T("private_size=%zd, res=%d", private_size, res);
 
     return res;
 };
@@ -138,7 +138,7 @@ int res_add_ref(PP_Resource res)
 {
     int r = -ENOENT;
 
-    LOG1("{%d}", res);
+    LOG_T("{%d}", res);
 
     pthread_mutex_lock(&lock);
 
@@ -154,7 +154,7 @@ int res_release(PP_Resource res)
 {
     int r = -ENOENT;
 
-    LOG1("{%d}", res);
+    LOG_T("{%d}", res);
 
     pthread_mutex_lock(&lock);
 

@@ -37,7 +37,7 @@ static void Destructor(url_request_info_t* ctx)
 {
     int i;
 
-    LOG("{%d}", ctx->self);
+    LOG_D("{%d}", ctx->self);
 
     for(i = 0; i < PP_URLREQUESTPROPERTY_LAST; i++)
         if(ctx->props[i].type != PP_VARTYPE_UNDEFINED)
@@ -70,7 +70,7 @@ static PP_Resource Create(PP_Instance instance)
     url_req->instance_id = instance;
     url_req->self = res;
 
-    LOG("{%d}", res);
+    LOG_D("{%d}", res);
 
     return res;
 };
@@ -116,18 +116,18 @@ static PP_Bool SetProperty(PP_Resource request,
 
     url_req->props[property] = value;
 
-    LOG("{%d} property=%s", request, URLRequestProperties[property]);
+    LOG_D("{%d} property=%s", request, URLRequestProperties[property]);
     if(value.type == PP_VARTYPE_STRING)
     {
-        LOG("{%d} value=[%s]", request, (char*)res_private(value.value.as_id));
+        LOG_D("{%d} value=[%s]", request, (char*)res_private(value.value.as_id));
     }
     else if(value.type == PP_VARTYPE_INT32)
     {
-        LOG("{%d} value=%d", request, value.value.as_int);
+        LOG_D("{%d} value=%d", request, value.value.as_int);
     }
     else if(value.type == PP_VARTYPE_BOOL)
     {
-        LOG("{%d} value=%s", request, value.value.as_bool ? "TRUE" : "FALSE");
+        LOG_D("{%d} value=%s", request, value.value.as_bool ? "TRUE" : "FALSE");
     };
 
     return PP_TRUE;
@@ -151,7 +151,7 @@ static PP_Bool AppendDataToBody(PP_Resource request, const void* data, uint32_t 
 {
     url_request_info_t* url_req = (url_request_info_t*)res_private(request);
 
-    LOG("{%d} data=%p, len=%d", request, data, len);
+    LOG_D("{%d} data=%p, len=%d", request, data, len);
 
     url_req->DataToBody.data = malloc(len);
     memcpy(url_req->DataToBody.data, data, len);
@@ -189,7 +189,7 @@ static PP_Bool AppendFileToBody(PP_Resource request, PP_Resource file_ref,
 {
     url_request_info_t* url_req = (url_request_info_t*)res_private(request);
 
-    LOG("{%d}", request);
+    LOG_D("{%d}", request);
 
     res_add_ref(file_ref);
 

@@ -21,7 +21,7 @@ static void AddRefResource(PP_Resource resource)
 
     r = res_add_ref(resource);
 
-    LOG1("res_add_ref(%d)=%d", resource, r);
+    LOG_T("res_add_ref(%d)=%d", resource, r);
 };
 
 static void ReleaseResource(PP_Resource resource)
@@ -30,7 +30,7 @@ static void ReleaseResource(PP_Resource resource)
 
     r = res_release(resource);
 
-    LOG1("res_release(%d)=%d", resource, r);
+    LOG_T("res_release(%d)=%d", resource, r);
 };
 
 /**
@@ -89,7 +89,7 @@ static PP_TimeTicks GetTimeTicks(void)
  */
 static void CallOnMainThread(int32_t delay_in_milliseconds, struct PP_CompletionCallback callback, int32_t result)
 {
-    LOG("delay_in_milliseconds=%d, result=%d", (int)delay_in_milliseconds, (int)result);
+    LOG_T("delay_in_milliseconds=%d, result=%d", (int)delay_in_milliseconds, (int)result);
     PPB_MessageLoop_push(0, callback, delay_in_milliseconds, result);
 };
 

@@ -98,7 +98,7 @@ static void* MapTexSubImage2DCHROMIUM(PP_Resource context,
     d->type = type;
     d->access = access;
 
-    LOG("xoffset=%d, yoffset=%d, width=%d, height=%d", d->xoffset, d->yoffset, d->width, d->height);
+    LOG_D("xoffset=%d, yoffset=%d, width=%d, height=%d", d->xoffset, d->yoffset, d->width, d->height);
 
     return (unsigned char*)d + sizeof(MapTexSubImage2DCHROMIUM_t);
 };
@@ -109,7 +109,7 @@ static void UnmapTexSubImage2DCHROMIUM(PP_Resource context, const void* mem)
 
     LOG_TD;
 
-    LOG("xoffset=%d, yoffset=%d, width=%d, height=%d", d->xoffset, d->yoffset, d->width, d->height);
+    LOG_D("xoffset=%d, yoffset=%d, width=%d, height=%d", d->xoffset, d->yoffset, d->width, d->height);
 
     glTexSubImage2D
     (

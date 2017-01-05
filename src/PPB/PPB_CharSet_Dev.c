@@ -41,13 +41,13 @@ char* UTF16ToCharSet(PP_Instance instance,
     char *buf, *inbuf, *outbuf;
     size_t inbytesleft, outbytesleft;
 
-    LOG("");
+    LOG_T("{%d}", instance);
 
     // const char *tocode, const char *fromcode
     i = iconv_open(output_char_set, "UTF-16");
     if(i == (iconv_t) -1)
     {
-        LOG("iconv_open([%s], UTF-16) failed", output_char_set);
+        LOG_E("iconv_open([%s], UTF-16) failed", output_char_set);
         return NULL;
     };
 
@@ -62,7 +62,7 @@ char* UTF16ToCharSet(PP_Instance instance,
     r = iconv(i, &inbuf, &inbytesleft, &outbuf, &outbytesleft);
     if(r == (size_t) -1)
     {
-        LOG("iconv() failed, errno=%d", errno);
+        LOG_E("iconv() failed, errno=%d", errno);
         MemFree(buf);
         buf = NULL;
     }
@@ -95,13 +95,13 @@ static uint16_t* CharSetToUTF16(PP_Instance instance,
     char *buf, *inbuf, *outbuf;
     size_t inbytesleft, outbytesleft;
 
-    LOG("");
+    LOG_T("{%d}", instance);
 
     // const char *tocode, const char *fromcode
     i = iconv_open("UTF-16", input_char_set);
     if(i == (iconv_t) -1)
     {
-        LOG("iconv_open(UTF-16, [%s]) failed", input_char_set);
+        LOG_E("iconv_open(UTF-16, [%s]) failed", input_char_set);
         return NULL;
     };
 
@@ -116,7 +116,7 @@ static uint16_t* CharSetToUTF16(PP_Instance instance,
     r = iconv(i, &inbuf, &inbytesleft, &outbuf, &outbytesleft);
     if(r == (size_t) -1)
     {
-        LOG("iconv() failed, errno=%d", errno);
+        LOG_E("iconv() failed, errno=%d", errno);
         MemFree(buf);
         buf = NULL;
     }
@@ -132,8 +132,6 @@ static uint16_t* CharSetToUTF16(PP_Instance instance,
 
 static struct PP_Var GetDefaultCharSet(PP_Instance instance)
 {
-    LOG("");
-
     return VarFromUtf8_c("UTF-8");
 };
 

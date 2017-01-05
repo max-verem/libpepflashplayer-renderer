@@ -82,7 +82,7 @@ static PP_Bool GetRect(PP_Resource resource, struct PP_Rect* rect)
 static PP_Bool IsFullscreen(PP_Resource resource)
 {
     instance_t* inst = (instance_t*)res_private(resource);
-    LOG("inst->is_full_screen=%d", inst->is_full_screen);
+    LOG_N("inst->is_full_screen=%d", inst->is_full_screen);
     return inst->is_full_screen;
 };
 

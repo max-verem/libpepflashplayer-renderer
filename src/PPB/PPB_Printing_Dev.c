@@ -25,7 +25,7 @@ extern struct PPB_Printing_Dev_0_7 PPB_Printing_Dev_0_7_instance;
  */
 static PP_Resource Create(PP_Instance instance)
 {
-    LOG("");
+    LOG_TD;
     res_add_ref(instance);
     return instance;
 };

@@ -60,7 +60,7 @@ static struct PP_Var GetProperty(PP_Resource response, PP_URLResponseProperty pr
     url_loader_t* url_loader = (url_loader_t*)res_private(response);
     url_request_info_t* url_request_info = (url_request_info_t*)res_private(url_loader->request_info);
 
-    LOG("property_name=[%s]", property_names[property]);
+    LOG_D("property_name=[%s]", property_names[property]);
 
     switch(property)
     {

@@ -100,7 +100,7 @@ static size_t curl_read_from_buf_cb(char *ptr, size_t size, size_t nmemb, void *
 
     /* copy */
     memcpy(ptr, url_request_info->DataToBody.data + url_loader->sent.body_pos, n);
-    LOG("{%d} url_loader->body_pos=%d, n=%d", url_loader->self, (int)url_loader->sent.body_pos, (int)n);
+    LOG_D("{%d} url_loader->body_pos=%d, n=%d", url_loader->self, (int)url_loader->sent.body_pos, (int)n);
     url_loader->sent.body_pos += n;
 
     return n;
@@ -122,7 +122,7 @@ static size_t curl_write_received_cb(char *ptr, size_t size, size_t nmemb, void 
     size_t n = 0;
     url_loader_t* url_loader = (url_loader_t*)userdata;
 
-    LOG("");
+    LOG_N("{%d}", url_loader->self);
 
     if(((url_loader_t*)userdata)->f_thread_abort)
         return CURL_READFUNC_ABORT;
@@ -158,13 +158,13 @@ static size_t curl_write_received_cb(char *ptr, size_t size, size_t nmemb, void 
         strncpy(name, "/tmp/PPB_URLLoader-XXXXXX", sizeof(name));
         mktemp(name);
 
-        LOG("{%d} name=[%s]", url_loader->self, name);
+        LOG_N("{%d} name=[%s]", url_loader->self, name);
 
         url_loader->writer = fopen(name, "wb");
 
         if(!url_loader->writer)
         {
-            LOG("{%d} error=[%s]", url_loader->self, strerror(errno));
+            LOG_D("{%d} error=[%s]", url_loader->self, strerror(errno));
             n = CURL_READFUNC_ABORT;
             url_loader->state = URLLoader_ABORTED;
         }
@@ -183,7 +183,7 @@ static size_t curl_write_received_cb(char *ptr, size_t size, size_t nmemb, void 
         if(ferror(url_loader->writer))
         {
             n = CURL_READFUNC_ABORT;
-            LOG("{%d} ferror=[%s]", url_loader->self, strerror(errno));
+            LOG_E("{%d} ferror=[%s]", url_loader->self, strerror(errno));
         }
         else
             url_loader->recv.body_len += n;
@@ -201,7 +201,7 @@ static size_t curl_write_received_cb(char *ptr, size_t size, size_t nmemb, void 
 
     pthread_mutex_unlock(&url_loader->lock);
 
-    LOG("{%d} size=%d, nmemb=%d, n=%d", url_loader->self, (int)size, (int)nmemb, (int)n);
+    LOG_D("{%d} size=%d, nmemb=%d, n=%d", url_loader->self, (int)size, (int)nmemb, (int)n);
 
     return n;
 };
@@ -219,7 +219,7 @@ static size_t curl_header_cb(char *buffer, size_t size, size_t nitems, void *use
     url_loader->recv.header_len += n;
     url_loader->recv.header_buffer[url_loader->recv.header_len] = 0;
 
-    LOG("{%d} %4d|%4d| %.*s", url_loader->self, (int)size, (int)nitems, (int)n, buffer);
+    LOG_T("{%d} %4d|%4d| %.*s", url_loader->self, (int)size, (int)nitems, (int)n, buffer);
 
     return n;
 };
@@ -258,7 +258,7 @@ static void* curl_downloader(void* p)
 
     url = VarToUtf8(url_request_info->props[PP_URLREQUESTPROPERTY_URL], NULL);
 
-    LOG("{%d} url=[%s]", url_loader->self, url);
+    LOG_N("{%d} url=[%s]", url_loader->self, url);
 
     /* init curl lib */
     CURL_GLOBAL_INIT;
@@ -274,7 +274,7 @@ static void* curl_downloader(void* p)
     if(url_request_info->props[PP_URLREQUESTPROPERTY_METHOD].type == PP_VARTYPE_STRING &&
         !strcasecmp("POST", VarToUtf8(url_request_info->props[PP_URLREQUESTPROPERTY_METHOD], NULL)))
     {
-        LOG("{%d} POST", url_loader->self);
+        LOG_N("{%d} POST", url_loader->self);
         curl_easy_setopt(curl, CURLOPT_POST, 1);
     };
 
@@ -335,13 +335,13 @@ static void* curl_downloader(void* p)
 
             e = strndup(h, t - h);
 
-            LOG("e=[%s]", e);
+            LOG_D("e=[%s]", e);
 
             if(*e)
             {
                 headers_list = curl_slist_append(headers_list, e);
                 h = t + 1;
-                LOG("curl_slist_append(%s)", e);
+                LOG_D("curl_slist_append(%s)", e);
             }
             else
                 h = NULL;
@@ -361,7 +361,7 @@ static void* curl_downloader(void* p)
 
     /* run transfer */
     r = curl_easy_perform(curl);
-    LOG("curl_easy_perform return %d", r);
+    LOG_N("curl_easy_perform return %d", r);
 
     /* lock struct */
     pthread_mutex_lock(&url_loader->lock);
@@ -391,7 +391,7 @@ static void* curl_downloader(void* p)
     else
     {
         url_loader->state = URLLoader_ERROR;
-        LOG("{%d} curl_error_msg=[%s]", url_loader->self, curl_error_msg);
+        LOG_E("{%d} curl_error_msg=[%s]", url_loader->self, curl_error_msg);
     };
 
     /* callback connect */
@@ -434,7 +434,9 @@ static void Close2(url_loader_t* url_loader)
     if(url_loader->f_thread_started)
     {
         url_loader->f_thread_abort = 1;
+        pthread_mutex_unlock(&url_loader->lock);
         pthread_join(url_loader->thread, NULL);
+        pthread_mutex_lock(&url_loader->lock);
         url_loader->f_thread_abort = url_loader->f_thread_started = 0;
     };
 
@@ -457,7 +459,7 @@ static void Close2(url_loader_t* url_loader)
 
 static void Destructor(url_loader_t* ctx)
 {
-    LOG("{%d}", ctx->self);
+    LOG_D("{%d}", ctx->self);
 
     /* run close that first */
     Close2(ctx);
@@ -485,7 +487,7 @@ static PP_Resource Create(PP_Instance instance)
     url_loader_t* url_loader;
     int res = res_create(sizeof(url_loader_t), &PPB_URLLoader_1_0_instance, (res_destructor_t)Destructor);
 
-    LOG("res=%d", res);
+    LOG_D("res=%d", res);
 
     /* get private data */
     url_loader = (url_loader_t*)res_private(res);
@@ -539,7 +541,7 @@ static int32_t Open(PP_Resource loader, PP_Resource request_info, struct PP_Comp
     url_loader_t* url_loader = (url_loader_t*)res_private(loader);
     url_request_info_t* url_request_info = (url_request_info_t*)res_private(request_info);
 
-    LOG("{%d}", loader);
+    LOG_D("{%d}", loader);
 
     /* save request */
     res_add_ref(url_loader->request_info = request_info);
@@ -547,14 +549,14 @@ static int32_t Open(PP_Resource loader, PP_Resource request_info, struct PP_Comp
     /* check if it not busy */
     if(url_loader->state != URLLoader_NONE)
     {
-        LOG("{%d} BUSY, url_loader->state=%d", loader, url_loader->state);
+        LOG_E("{%d} BUSY, url_loader->state=%d", loader, url_loader->state);
         return PP_ERROR_INPROGRESS;
     };
 
     /* parse url */
     if(url_request_info->props[PP_URLREQUESTPROPERTY_URL].type != PP_VARTYPE_STRING)
     {
-        LOG("{%d} url is not a string", loader);
+        LOG_E("{%d} url is not a string", loader);
         return PP_ERROR_BADARGUMENT;
     };
 
@@ -574,14 +576,14 @@ static int32_t Open(PP_Resource loader, PP_Resource request_info, struct PP_Comp
     {
         char* filename;
 
-        LOG("{%d} will try localfile", loader);
+        LOG_N("{%d} will try localfile", loader);
 
         filename = calloc(1, comp.path.len + 1);
         memcpy(filename, url + comp.path.begin, comp.path.len);
         url_loader->reader = fopen(filename, "rb");
         free(filename);
 
-        LOG("{%d} filename=[%s]", loader, filename);
+        LOG_N("{%d} filename=[%s]", loader, filename);
 
         if(url_loader->reader)
         {
@@ -597,7 +599,7 @@ static int32_t Open(PP_Resource loader, PP_Resource request_info, struct PP_Comp
         }
         else
         {
-            LOG("{%d} failed to open [%s]", loader, filename);
+            LOG_E("{%d} failed to open [%s]", loader, filename);
 
             url_loader->recv.statuscode = 404;
             url_loader->recv.body_pos = url_loader->recv.body_size = url_loader->recv.body_len = 0;
@@ -614,9 +616,9 @@ static int32_t Open(PP_Resource loader, PP_Resource request_info, struct PP_Comp
         URL_COMPONENT_IS_HTTP(url, comp.scheme)
     )
     {
-        LOG("{%d} will try curl", loader);
+        LOG_N("{%d} will try curl", loader);
 
-        LOG("{%d} url=[%s]", loader, url);
+        LOG_N("{%d} url=[%s]", loader, url);
 
         /* reset state */
         url_loader->state = URLLoader_CONNECTING;
@@ -632,7 +634,7 @@ static int32_t Open(PP_Resource loader, PP_Resource request_info, struct PP_Comp
         return PP_OK_COMPLETIONPENDING;
     };
 
-    LOG("{%d} NOTHING", loader);
+    LOG_E("{%d} NOTHING", loader);
     return PP_ERROR_BADARGUMENT;
 };
 
@@ -702,7 +704,7 @@ static PP_Bool GetDownloadProgress(PP_Resource loader, int64_t* bytes_received, 
 {
     url_loader_t* url_loader = (url_loader_t*)res_private(loader);
 
-    LOG("{%d}", loader);
+    LOG_D("{%d}", loader);
 
     if(!url_loader->reader)
         return PP_FALSE;
@@ -725,7 +727,7 @@ static PP_Bool GetDownloadProgress(PP_Resource loader, int64_t* bytes_received, 
  */
 static PP_Resource GetResponseInfo(PP_Resource loader)
 {
-    LOG("{%d}", loader);
+    LOG_D("{%d}", loader);
     res_add_ref(loader);
     return loader;
 };
@@ -754,13 +756,13 @@ static int32_t ReadResponseBody(PP_Resource loader, void* buffer, int32_t bytes_
     int r;
     url_loader_t* url_loader;
 
-    LOG("{%d}", loader);
+    LOG_N("{%d}", loader);
 
     url_loader = (url_loader_t*)res_private(loader);
 
     pthread_mutex_lock(&url_loader->lock);
 
-    LOG("{%d}, url_loader=%p", loader, url_loader);
+    LOG_N("{%d}, url_loader=%p", loader, url_loader);
 
     if(url_loader->reader)
     {
@@ -783,7 +785,7 @@ static int32_t ReadResponseBody(PP_Resource loader, void* buffer, int32_t bytes_
 
     pthread_mutex_unlock(&url_loader->lock);
 
-    LOG("{%d}, r=%d, bytes_to_read=%d", loader, r, bytes_to_read);
+    LOG_N("{%d}, r=%d, bytes_to_read=%d", loader, r, bytes_to_read);
 
     return r;
 };
@@ -829,12 +831,11 @@ static void Close(PP_Resource loader)
 {
     url_loader_t* url_loader = (url_loader_t*)res_private(loader);
 
-    LOG("{%d}", loader);
+    LOG_D("{%d}", loader);
 
     Close2(url_loader);
 
 };
-
 
 struct PPB_URLLoader_1_0 PPB_URLLoader_1_0_instance =
 {

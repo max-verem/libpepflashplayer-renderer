@@ -23,14 +23,14 @@ void uriparser_parse(const char* url, struct PP_URLComponents_Dev* comp)
     UriParserStateA state;
     struct PP_URLComponent_Dev und = {0, -1};
 
-    LOG1("url=[%s]", url);
+    LOG_D("url=[%s]", url);
 
     memset(&uri, 0, sizeof(uri));
     memset(&state, 0, sizeof(state));
 
     state.uri = &uri;
     r = uriParseUriA(&state, url);
-    LOG1("uriParseUriA(%p=%s)=%d", url, url, r);
+    LOG_D("uriParseUriA(%p=%s)=%d", url, url, r);
 
     if(uri.scheme.first && uri.scheme.afterLast)
     {
@@ -39,9 +39,9 @@ void uriparser_parse(const char* url, struct PP_URLComponents_Dev* comp)
     }
     else
         comp->scheme = und;
-    LOG1("sheme=[%d,%d]", comp->scheme.begin, comp->scheme.len);
+    LOG_D("sheme=[%d,%d]", comp->scheme.begin, comp->scheme.len);
 
-    LOG1("uri.hostText.afterLast=%p, uri.hostText.first=%p", uri.hostText.afterLast, uri.hostText.first);
+    LOG_D("uri.hostText.afterLast=%p, uri.hostText.first=%p", uri.hostText.afterLast, uri.hostText.first);
     if(uri.hostText.first && (uri.hostText.afterLast != uri.hostText.first))
     {
         comp->host.begin = uri.hostText.first - url;
@@ -49,7 +49,7 @@ void uriparser_parse(const char* url, struct PP_URLComponents_Dev* comp)
     }
     else
         comp->host = und;
-    LOG1("host=[%d,%d]", comp->host.begin, comp->host.len);
+    LOG_D("host=[%d,%d]", comp->host.begin, comp->host.len);
 
     if(uri.portText.first)
     {
@@ -58,7 +58,7 @@ void uriparser_parse(const char* url, struct PP_URLComponents_Dev* comp)
     }
     else
         comp->port = und;
-    LOG1("port=[%d,%d]", comp->port.begin, comp->port.len);
+    LOG_D("port=[%d,%d]", comp->port.begin, comp->port.len);
 
     if(uri.query.first)
     {
@@ -68,7 +68,7 @@ void uriparser_parse(const char* url, struct PP_URLComponents_Dev* comp)
     else
         comp->query = und;
 
-    LOG1("query=[%d,%d]", comp->query.begin, comp->query.len);
+    LOG_D("query=[%d,%d]", comp->query.begin, comp->query.len);
 
     if(uri.fragment.first)
     {
@@ -78,14 +78,13 @@ void uriparser_parse(const char* url, struct PP_URLComponents_Dev* comp)
     else
         comp->ref = und;
 
-    LOG1("ref=[%d,%d]", comp->ref.begin, comp->ref.len);
-
+    LOG_D("ref=[%d,%d]", comp->ref.begin, comp->ref.len);
 
     if(uri.userInfo.first)
     {
         char* tmp = strchr(uri.userInfo.first, ':');
 
-        LOG1("uri.userInfo.first=%p, uri.userInfo.afterLast=%p, tmp=%p", uri.userInfo.first, uri.userInfo.afterLast, tmp);
+        LOG_D("uri.userInfo.first=%p, uri.userInfo.afterLast=%p, tmp=%p", uri.userInfo.first, uri.userInfo.afterLast, tmp);
 
         comp->username.begin = uri.userInfo.first - url;
 
@@ -108,11 +107,11 @@ void uriparser_parse(const char* url, struct PP_URLComponents_Dev* comp)
         comp->username = und;
     };
 
-    LOG1("username=[%d,%d]", comp->username.begin, comp->username.len);
-    LOG1("password=[%d,%d]", comp->password.begin, comp->password.len);
-
-    LOG1("uri.pathHead->text.first=%p, uri.pathTail->text.afterLast=%p",
+    LOG_D("username=[%d,%d]", comp->username.begin, comp->username.len);
+    LOG_D("password=[%d,%d]", comp->password.begin, comp->password.len);
+    LOG_D("uri.pathHead->text.first=%p, uri.pathTail->text.afterLast=%p",
         uri.pathHead->text.first, uri.pathTail->text.afterLast);
+
     if(uri.pathHead && (uri.pathHead->text.first != uri.pathHead->text.afterLast))
     {
         comp->path.begin = uri.pathHead->text.first - url - 1 ;
@@ -125,8 +124,7 @@ void uriparser_parse(const char* url, struct PP_URLComponents_Dev* comp)
     else
         comp->path = und;
 
-    LOG1("path=[%d,%d]", comp->path.begin, comp->path.len);
-
+    LOG_D("path=[%d,%d]", comp->path.begin, comp->path.len);
 
     uriFreeUriMembersA(&uri);
 };

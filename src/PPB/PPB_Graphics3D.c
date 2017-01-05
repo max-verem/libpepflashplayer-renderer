@@ -28,18 +28,18 @@ static void Destructor(graphics_3d_t* graphics_3d)
 {
     CUresult e;
 
-    LOG("{%d}", graphics_3d->self);
+    LOG_D("{%d}", graphics_3d->self);
 
     if(CUDA_SUCCESS != (e = cuCtxPushCurrent(graphics_3d->cu_ctx)))
-        LOG("cuCtxPushCurrent failed: %s", getCudaDrvErrorString(e));
+        LOG_E("cuCtxPushCurrent failed: %s", getCudaDrvErrorString(e));
 
     if(CUDA_SUCCESS != (e = cudaGraphicsUnregisterResource(graphics_3d->pbo_res)))
-        LOG("cudaGraphicsUnregisterResource failed: %s", getCudaDrvErrorString(e));
+        LOG_E("cudaGraphicsUnregisterResource failed: %s", getCudaDrvErrorString(e));
 
     glDeleteBuffers(1, &graphics_3d->pbo);
 
     if(CUDA_SUCCESS != (e = cuCtxDestroy(graphics_3d->cu_ctx)))
-        LOG("cuCtxDestroy failed: %s", getCudaDrvErrorString(e));
+        LOG_E("cuCtxDestroy failed: %s", getCudaDrvErrorString(e));
 
 
     if(graphics_3d->ctx && graphics_3d->dpy)
@@ -180,61 +180,61 @@ static PP_Resource Create(PP_Instance instance, PP_Resource share_context, const
         switch(attrib_list[i])
         {
             case PP_GRAPHICS3DATTRIB_ALPHA_SIZE:
-                LOG("ALPHA_SIZE=%d", (int)attrib_list[i + 1]); i++;
+                LOG_N("ALPHA_SIZE=%d", (int)attrib_list[i + 1]); i++;
                 break;
 
             case PP_GRAPHICS3DATTRIB_BLUE_SIZE:
-                LOG("BLUE_SIZE=%d", (int)attrib_list[i + 1]); i++;
+                LOG_N("BLUE_SIZE=%d", (int)attrib_list[i + 1]); i++;
                 break;
 
             case PP_GRAPHICS3DATTRIB_GREEN_SIZE:
-                LOG("GREEN_SIZE=%d", (int)attrib_list[i + 1]); i++;
+                LOG_N("GREEN_SIZE=%d", (int)attrib_list[i + 1]); i++;
                 break;
 
             case PP_GRAPHICS3DATTRIB_RED_SIZE:
-                LOG("RED_SIZE=%d", (int)attrib_list[i + 1]); i++;
+                LOG_N("RED_SIZE=%d", (int)attrib_list[i + 1]); i++;
                 break;
 
             case PP_GRAPHICS3DATTRIB_DEPTH_SIZE:
-                LOG("DEPTH_SIZE=%d", (int)attrib_list[i + 1]); i++;
+                LOG_N("DEPTH_SIZE=%d", (int)attrib_list[i + 1]); i++;
                 break;
 
             case PP_GRAPHICS3DATTRIB_STENCIL_SIZE:
-                LOG("STENCIL_SIZE=%d", (int)attrib_list[i + 1]); i++;
+                LOG_N("STENCIL_SIZE=%d", (int)attrib_list[i + 1]); i++;
                 break;
 
             case PP_GRAPHICS3DATTRIB_SAMPLES:
-                LOG("SAMPLES=%d", (int)attrib_list[i + 1]); i++;
+                LOG_N("SAMPLES=%d", (int)attrib_list[i + 1]); i++;
                 break;
 
             case PP_GRAPHICS3DATTRIB_SAMPLE_BUFFERS:
-                LOG("SAMPLE_BUFFERS=%d", (int)attrib_list[i + 1]); i++;
+                LOG_N("SAMPLE_BUFFERS=%d", (int)attrib_list[i + 1]); i++;
                 break;
 
             case PP_GRAPHICS3DATTRIB_WIDTH:
-                LOG("WIDTH=%d", (int)attrib_list[i + 1]); i++;
+                LOG_N("WIDTH=%d", (int)attrib_list[i + 1]); i++;
                 break;
 
             case PP_GRAPHICS3DATTRIB_HEIGHT:
-                LOG("HEIGHT=%d", (int)attrib_list[i + 1]); i++;
+                LOG_N("HEIGHT=%d", (int)attrib_list[i + 1]); i++;
                 break;
 
             case PP_GRAPHICS3DATTRIB_SWAP_BEHAVIOR:
-                LOG("SWAP_BEHAVIOR=0x%.8X (%s)", (int)attrib_list[i + 1],
+                LOG_N("SWAP_BEHAVIOR=0x%.8X (%s)", (int)attrib_list[i + 1],
                     attrib_list[i + 1] == PP_GRAPHICS3DATTRIB_BUFFER_PRESERVED ? "PRESERVED" :
                     attrib_list[i + 1] == PP_GRAPHICS3DATTRIB_BUFFER_DESTROYED ? "DESTROYED" :
                     "UNKNOWN"); i++;
                 break;
 
             case PP_GRAPHICS3DATTRIB_GPU_PREFERENCE:
-                LOG("PP_GRAPHICS3DATTRIB_GPU_PREFERENCE=0x%.8X (%s)", attrib_list[i + 1],
+                LOG_N("PP_GRAPHICS3DATTRIB_GPU_PREFERENCE=0x%.8X (%s)", attrib_list[i + 1],
                     attrib_list[i + 1] == PP_GRAPHICS3DATTRIB_GPU_PREFERENCE_LOW_POWER ? "LOW_POWER" :
                     attrib_list[i + 1] == PP_GRAPHICS3DATTRIB_GPU_PREFERENCE_PERFORMANCE ? "PERFORMANCE" :
                     "UNKNOWN"); i++;
                 break;
 
             default:
-                LOG("Unknow attr 0x%.8X", (int)attrib_list[i]);
+                LOG_N("Unknow attr 0x%.8X", (int)attrib_list[i]);
                 break;
         };
     };
@@ -245,31 +245,31 @@ static PP_Resource Create(PP_Instance instance, PP_Resource share_context, const
     graphics_3d->self = res;
     graphics_3d->share_context = share_context;
 
-    LOG("res=%d share_context=%d", res, share_context);
+    LOG_N("res=%d share_context=%d", res, share_context);
 
     // load function
     if(!(graphics_3d->_eglQueryDevicesEXT = (PFNEGLQUERYDEVICESEXTPROC)eglGetProcAddress("eglQueryDevicesEXT")))
     {
-        LOG("eglGetProcAddress(\"eglQueryDevicesEXT\") == NULL");
+        LOG_E("eglGetProcAddress(\"eglQueryDevicesEXT\") == NULL");
         res_release(res);
         return 0;
     };
     if(!(graphics_3d->_eglQueryDeviceStringEXT = (PFNEGLQUERYDEVICESTRINGEXTPROC)eglGetProcAddress("eglQueryDeviceStringEXT")))
     {
-        LOG("eglGetProcAddress(\"eglQueryDeviceStringEXT\") == NULL");
+        LOG_E("eglGetProcAddress(\"eglQueryDeviceStringEXT\") == NULL");
         res_release(res);
         return 0;
     };
     if(!(graphics_3d->_eglGetPlatformDisplayEXT = (PFNEGLGETPLATFORMDISPLAYEXTPROC)eglGetProcAddress("eglGetPlatformDisplayEXT")))
     {
-        LOG("eglGetProcAddress(\"eglGetPlatformDisplayEXT\") == NULL");
+        LOG_E("eglGetProcAddress(\"eglGetPlatformDisplayEXT\") == NULL");
         res_release(res);
         return 0;
     };
 
     if(!graphics_3d->_eglQueryDevicesEXT(0, NULL, &graphics_3d->num_devices) || graphics_3d->num_devices < 1)
     {
-        LOG("_eglQueryDevicesEXT: num_devices=%d", graphics_3d->num_devices);
+        LOG_E("_eglQueryDevicesEXT: num_devices=%d", graphics_3d->num_devices);
         res_release(res);
         return 0;
     };
@@ -278,7 +278,7 @@ static PP_Resource Create(PP_Instance instance, PP_Resource share_context, const
 
     if(!graphics_3d->_eglQueryDevicesEXT(graphics_3d->num_devices, graphics_3d->devices, &graphics_3d->num_devices) || graphics_3d->num_devices < 1)
     {
-        LOG("_eglQueryDevicesEXT: num_devices=%d", num_devices);
+        LOG_E("_eglQueryDevicesEXT: num_devices=%d", num_devices);
         res_release(res);
         return 0;
     };
@@ -287,28 +287,28 @@ static PP_Resource Create(PP_Instance instance, PP_Resource share_context, const
     {
         const char *devstr = graphics_3d->_eglQueryDeviceStringEXT(graphics_3d->devices[i], EGL_DRM_DEVICE_FILE_EXT);
 
-        LOG("Device 0x%p: %s", graphics_3d->devices[i], devstr ? devstr : "NULL");
+        LOG_N("Device 0x%p: %s", graphics_3d->devices[i], devstr ? devstr : "NULL");
     }
 
     if((graphics_3d->dpy = graphics_3d->_eglGetPlatformDisplayEXT(EGL_PLATFORM_DEVICE_EXT, graphics_3d->devices[0], NULL)) == NULL)
     {
-        LOG("_eglQueryDevicesEXT: num_devices=%d", graphics_3d->num_devices);
+        LOG_E("_eglQueryDevicesEXT: num_devices=%d", graphics_3d->num_devices);
         res_release(res);
         return 0;
     };
 
     if(!eglInitialize(graphics_3d->dpy, &major, &minor))
     {
-        LOG("eglInitialize failed");
+        LOG_E("eglInitialize failed");
         res_release(res);
         return 0;
     };
 
-    LOG("EGL version %d.%d", major, minor);
+    LOG_N("EGL version %d.%d", major, minor);
 
     if(!eglChooseConfig(graphics_3d->dpy, attribs, NULL, 0, &graphics_3d->nc) || graphics_3d->nc < 1)
     {
-        LOG("eglChooseConfig failed");
+        LOG_E("eglChooseConfig failed");
         res_release(res);
         return 0;
     };
@@ -317,50 +317,49 @@ static PP_Resource Create(PP_Instance instance, PP_Resource share_context, const
 
     if(!eglChooseConfig(graphics_3d->dpy, attribs, graphics_3d->configs, graphics_3d->nc, &graphics_3d->nc) || graphics_3d->nc < 1)
     {
-        LOG("eglChooseConfig failed");
+        LOG_E("eglChooseConfig failed");
         res_release(res);
         return 0;
     };
 
     if((graphics_3d->pb = eglCreatePbufferSurface(graphics_3d->dpy, graphics_3d->configs[0], pbattribs)) == NULL)
     {
-        LOG("eglCreatePbufferSurface failed");
+        LOG_E("eglCreatePbufferSurface failed");
         res_release(res);
         return 0;
     };
 
     if (!eglBindAPI(EGL_OPENGL_API))
     {
-        LOG("eglBindAPI failed");
+        LOG_E("eglBindAPI failed");
         res_release(res);
         return 0;
     };
 
-
     if((graphics_3d->ctx = eglCreateContext(graphics_3d->dpy, graphics_3d->configs[0], NULL, NULL)) == NULL)
     {
-        LOG("eglCreateContext failed");
+        LOG_E("eglCreateContext failed");
         res_release(res);
         return 0;
     };
 
     if(!eglMakeCurrent(graphics_3d->dpy, graphics_3d->pb, graphics_3d->pb, graphics_3d->ctx))
     {
-        LOG("eglCreateContext failed");
+        LOG_E("eglCreateContext failed");
         res_release(res);
         return 0;
     };
 
     if(CUDA_SUCCESS != (e = cuInit(0)))
     {
-        LOG("cuInit failed");
+        LOG_E("cuInit failed");
         res_release(res);
         return 0;
     };
 
     if(CUDA_SUCCESS != (e = cuCtxCreate(&graphics_3d->cu_ctx, CU_CTX_BLOCKING_SYNC, graphics_3d->cu_dev)))
     {
-        LOG("cuCtxCreate failed: %s", getCudaDrvErrorString(e));
+        LOG_E("cuCtxCreate failed: %s", getCudaDrvErrorString(e));
         res_release(res);
         return 0;
     };
@@ -373,17 +372,14 @@ static PP_Resource Create(PP_Instance instance, PP_Resource share_context, const
     if(CUDA_SUCCESS != (e = cudaGraphicsGLRegisterBuffer
         (&graphics_3d->pbo_res, graphics_3d->pbo, cudaGraphicsMapFlagsWriteDiscard)))
     {
-        LOG("cudaGraphicsGLRegisterBuffer failed: %s", getCudaDrvErrorString(e));
+        LOG_E("cudaGraphicsGLRegisterBuffer failed: %s", getCudaDrvErrorString(e));
         res_release(res);
         return 0;
     };
 
-
-//    LOG("graphics_3d->pb=%d", graphics_3d->pb);
-
     if(CUDA_SUCCESS != (e = cuCtxPopCurrent(&cu_ctx_pop)))
     {
-        LOG("cuCtxCreate failed: %s", getCudaDrvErrorString(e));
+        LOG_E("cuCtxCreate failed: %s", getCudaDrvErrorString(e));
         res_release(res);
         return 0;
     };
@@ -564,6 +560,7 @@ static int32_t ResizeBuffers(PP_Resource context, int32_t width, int32_t height)
 static int swaps = 0;
 static int32_t SwapBuffers(PP_Resource context, struct PP_CompletionCallback callback)
 {
+    int r;
     void * devPtr;
     size_t size;
 
@@ -588,20 +585,19 @@ static int32_t SwapBuffers(PP_Resource context, struct PP_CompletionCallback cal
     glBindBuffer(GL_PIXEL_PACK_BUFFER, 0);
 
     if(CUDA_SUCCESS != (e = cuCtxPushCurrent(graphics_3d->cu_ctx)))
-        LOG("cuCtxCreate failed: %s", getCudaDrvErrorString(e));
+        LOG_E("cuCtxCreate failed: %s", getCudaDrvErrorString(e));
     if(CUDA_SUCCESS != (e = cudaGraphicsMapResources(1, &graphics_3d->pbo_res, 0)))
-        LOG("cudaGraphicsMapResources failed: %s", getCudaDrvErrorString(e));
+        LOG_E("cudaGraphicsMapResources failed: %s", getCudaDrvErrorString(e));
     if(CUDA_SUCCESS != (e = cudaGraphicsResourceGetMappedPointer(&devPtr, &size, graphics_3d->pbo_res)))
     {
-        LOG("cudaGraphicsResourceGetMappedPointer failed: %s", getCudaDrvErrorString(e));
-
+        LOG_E("cudaGraphicsResourceGetMappedPointer failed: %s", getCudaDrvErrorString(e));
     }
     else
     {
         FILE *f;
         char path[PATH_MAX];
 
-        LOG("cudaGraphicsResourceGetMappedPointer: devPtr=%p, size=%ld", devPtr, size);
+        LOG_N("cudaGraphicsResourceGetMappedPointer: devPtr=%p, size=%ld", devPtr, size);
 
         GLubyte *image = calloc(1, size);
 
@@ -614,18 +610,18 @@ static int32_t SwapBuffers(PP_Resource context, struct PP_CompletionCallback cal
         fclose(f);
 #endif
 
-        LOG("saved [%s]", path);
+        LOG_N("saved [%s]", path);
 
         free(image);
     };
     if(CUDA_SUCCESS != (e = cudaGraphicsUnmapResources(1, &graphics_3d->pbo_res, 0)))
-        LOG("cudaGraphicsUnmapResources failed: %s", getCudaDrvErrorString(e));
+        LOG_E("cudaGraphicsUnmapResources failed: %s", getCudaDrvErrorString(e));
     if(CUDA_SUCCESS != (e = cuCtxPopCurrent(&cu_ctx_pop)))
-        LOG("cuCtxCreate failed: %s", getCudaDrvErrorString(e));
+        LOG_E("cuCtxCreate failed: %s", getCudaDrvErrorString(e));
 
-    PPB_MessageLoop_push(0, callback, 0, PP_OK);
+    r = PPB_MessageLoop_push(0, callback, 0, PP_OK);
 
-    LOG("");
+    LOG_T("PPB_MessageLoop_push=%d", r);
 
     return PP_OK;
 };

@@ -30,7 +30,7 @@ struct PPB_ImageData_1_0 PPB_ImageData_1_0_instance;
 
 static void Destructor(image_data_t* ctx)
 {
-    LOG("{%d}", ctx->self);
+    LOG_D("{%d}", ctx->self);
 };
 
 static PP_Resource Create(PP_Instance instance, PP_ImageDataFormat format,
@@ -46,7 +46,7 @@ static PP_Resource Create(PP_Instance instance, PP_ImageDataFormat format,
     image_data->format = format;
     image_data->buf = calloc(1, 4 * size->width * size->height);
 
-    LOG("res=%d, size->width=%d, size->height=%d", res, size->width, size->height);
+    LOG_D("res=%d, size->width=%d, size->height=%d", res, size->width, size->height);
 
     return res;
 };
@@ -77,7 +77,6 @@ static void* Map(PP_Resource res)
 static void Unmap(PP_Resource image_data)
 {
     LOG_TD;
-    return 0;
 };
 
 struct PPB_ImageData_1_0 PPB_ImageData_1_0_instance =

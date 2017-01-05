@@ -14,7 +14,7 @@ typedef struct browser_font_trusted_desc
 
     struct PP_BrowserFont_Trusted_Description description;
 
-    PangoFT2FontMap *fontmap;
+    /*PangoFT2FontMap*/PangoFontMap *fontmap;
     PangoContext *context;
 //    PangoLayout *layout;
     PangoFont *font;

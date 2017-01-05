@@ -18,7 +18,7 @@ struct PPB_Graphics2D_1_1 PPB_Graphics2D_1_1_instance;
 
 static void Destructor(graphics_2d_t* ctx)
 {
-    LOG("{%d}", ctx->self);
+    LOG_D("{%d}", ctx->self);
 };
 
 static PP_Resource Create(PP_Instance instance,
@@ -34,7 +34,7 @@ static PP_Resource Create(PP_Instance instance,
     graphics_2d->is_always_opaque = is_always_opaque;
     graphics_2d->scale = 1.0;
 
-    LOG("res=%d, size->width=%d, size->height=%d, is_always_opaque=%d",
+    LOG_N("res=%d, size->width=%d, size->height=%d, is_always_opaque=%d",
         res, size->width, size->height, is_always_opaque);
 
     return res;
@@ -101,7 +101,7 @@ static void Scroll(PP_Resource graphics_2d,
  */
 static void ReplaceContents(PP_Resource res, PP_Resource image_data)
 {
-    LOG("{%d} image_data=%d", res, image_data);
+    LOG_N("{%d} image_data=%d", res, image_data);
 };
 
 /**
@@ -174,7 +174,7 @@ static PP_Bool SetScale(PP_Resource res, float scale)
 {
     graphics_2d_t* graphics_2d = (graphics_2d_t*)res_private(res);
 
-    LOG("{%d}", res);
+    LOG_N("{%d}", res);
 
     graphics_2d->scale = scale;
 
@@ -185,7 +185,7 @@ static float GetScale(PP_Resource res)
 {
     graphics_2d_t* graphics_2d = (graphics_2d_t*)res_private(res);
 
-    LOG("{%d}", res);
+    LOG_N("{%d}", res);
 
     return graphics_2d->scale;
 };

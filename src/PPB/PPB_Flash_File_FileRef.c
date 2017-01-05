@@ -105,9 +105,7 @@ static int32_t OpenFile(PP_Instance instance, const char* path, int32_t mode, PP
 
     r = open(dst, m | O_SYNC, 0666);
 
-    LOG("r=%d", r);
-    LOG("path=[%s]", path);
-    LOG("dst=[%s]", dst);
+    LOG_N("r=%d, path=[%s], dst=[%s]", r, path, dst);
 
     if(-1 == r)
     {
@@ -138,9 +136,7 @@ static int32_t RenameFile(PP_Instance instance, const char* path_from, const cha
 
     r = rename(src, dst);
 
-    LOG("r=%d", r);
-    LOG("path_from=[%s]", path_from);
-    LOG("path_to=[%s]", path_to);
+    LOG_N("r=%d, path_from=[%s], path_to=[%s]", r, path_from, path_to);
 
     if(r)
     {
@@ -164,7 +160,7 @@ static int32_t DeleteFileOrDir(PP_Instance instance, const char* path, PP_Bool r
 
     snprintf(dst, sizeof(dst), "%s/%s", pi->paths.Local, path);
 
-    LOG("path=[%s], recursive=%d", path, recursive);
+    LOG_N("path=[%s], recursive=%d", path, recursive);
 
     return 0;
 };
@@ -176,7 +172,7 @@ static int32_t CreateDir(PP_Instance instance, const char* path)
 
     snprintf(dst, sizeof(dst), "%s/%s", pi->paths.Local, path);
 
-    LOG("path=[%s]", path);
+    LOG_N("path=[%s]", path);
     mkdir_p(dst, 0666);
 
     return 0;
@@ -195,9 +191,7 @@ static int32_t QueryFile(PP_Instance instance, const char* path, struct PP_FileI
 
     r = stat(dst, &st);
 
-    LOG("r=%d", r);
-    LOG("path=[%s]", path);
-    LOG("dst=[%s]", dst);
+    LOG_N("r=%d, path=[%s], dst=[%s]", r, path, dst);
 
     if(-1 == r)
     {
@@ -266,7 +260,7 @@ static int32_t GetDirContents(PP_Instance instance, const char* path, struct PP_
         /* test it */
         if(stat(dst, &st))
         {
-            LOG("stat([%s]) failed, errno=%d", dst, errno);
+            LOG_E("stat([%s]) failed, errno=%d", dst, errno);
             continue;
         };
 

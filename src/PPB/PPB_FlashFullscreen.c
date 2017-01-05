@@ -16,13 +16,13 @@
 static PP_Bool IsFullscreen(PP_Instance instance)
 {
     instance_t* inst = (instance_t*)res_private(instance);
-    LOG("inst->is_full_screen=%d", inst->is_full_screen);
+    LOG_N("inst->is_full_screen=%d", inst->is_full_screen);
     return inst->is_full_screen;
 };
 
 static PP_Bool SetFullscreen(PP_Instance instance, PP_Bool fullscreen)
 {
-    LOG("fullscreen=%d", fullscreen);
+    LOG_N("fullscreen=%d", fullscreen);
     return 1;
 };
 
@@ -30,7 +30,7 @@ static PP_Bool GetScreenSize(PP_Instance instance, struct PP_Size* size)
 {
     size->width = 1920;
     size->height = 1080;
-    LOG("size->width=%d, size->height=%d", size->width, size->height);
+    LOG_N("size->width=%d, size->height=%d", size->width, size->height);
     return 1;
 };
 

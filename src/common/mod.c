@@ -47,20 +47,20 @@ int mod_load(const char* so_name, mod_t** pmod)
                 }
                 else
                 {
-                    LOG("PPP_GetInterface(%s) failed", PPP_INSTANCE_INTERFACE_1_1);
+                    LOG_E("PPP_GetInterface(%s) failed", PPP_INSTANCE_INTERFACE_1_1);
                     r = -ENOENT;
                 };
             }
             else
-                LOG("PPP_InitializeModule failed, r=%d", r);
+                LOG_E("PPP_InitializeModule failed, r=%d", r);
         }
         else
         {
             if(!mod->PPP_InitializeModule)
-                LOG("dlopen(%s) failed", "PPP_InitializeModule");
+                LOG_E("dlopen(%s) failed", "PPP_InitializeModule");
 
             if(!mod->PPP_GetInterface)
-                LOG("dlopen(%s) failed", "PPP_GetInterface");
+                LOG_E("dlopen(%s) failed", "PPP_GetInterface");
 
             r = -ENOENT;
         };
@@ -68,7 +68,7 @@ int mod_load(const char* so_name, mod_t** pmod)
     else
     {
         r = -errno;
-        LOG("dlopen(%s) failed, r=%d", so_name, r);
+        LOG_E("dlopen(%s) failed, r=%d", so_name, r);
     };
 
     res_release(mod->id);

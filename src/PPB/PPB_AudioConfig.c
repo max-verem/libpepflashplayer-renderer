@@ -27,7 +27,7 @@ typedef struct
 
 static void Destructor(audio_config_t* ctx)
 {
-    LOG("{%d}", ctx->self);
+    LOG_T("{%d}", ctx->self);
 };
 
 static PP_Resource CreateStereo16Bit(PP_Instance instance,
@@ -42,7 +42,7 @@ static PP_Resource CreateStereo16Bit(PP_Instance instance,
     ctx->sample_rate = sample_rate;
     ctx->sample_frame_count = sample_frame_count;
 
-    LOG("sample_rate=%d, sample_frame_count=%d", sample_rate, sample_frame_count);
+    LOG_D("sample_rate=%d, sample_frame_count=%d", sample_rate, sample_frame_count);
 
     return res;
 };

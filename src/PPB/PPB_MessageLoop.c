@@ -78,7 +78,7 @@ static void Destructor(message_loop_t* ctx)
 {
     message_loop_item_t* item;
 
-    LOG("{%d}", ctx->self);
+    LOG_D("{%d}", ctx->self);
 
     /* free items */
     for(item = ctx->items; item;)
@@ -211,7 +211,7 @@ static int32_t AttachToCurrentThread(PP_Resource res)
     else
         r = PP_ERROR_INPROGRESS;
 
-    LOG("{%d} r=%d", res, r);
+    LOG_D("{%d} r=%d", res, r);
 
     return r;
 };
@@ -244,13 +244,13 @@ static int32_t Run(PP_Resource res)
     message_loop_item_t* item;
     message_loop_t* msg_loop = (message_loop_t*)res_private(res);
 
-    LOG("{%d}", res);
+    LOG_D("{%d}", res);
 
     while(1)
     {
         pthread_mutex_lock(&registry.lock);
 
-        LOG1("{%d} msg_loop=%p, msg_loop->f_exit=%d, msg_loop->items=%p",
+        LOG_T("{%d} msg_loop=%p, msg_loop->f_exit=%d, msg_loop->items=%p",
             res, msg_loop, msg_loop->f_exit, msg_loop->items);
 
         while(!msg_loop->f_exit && !msg_loop->items)
@@ -266,7 +266,7 @@ static int32_t Run(PP_Resource res)
 
         if(item)
         {
-            LOG1("{%d} item=%p", res, item);
+            LOG_T("{%d} item=%p", res, item);
 
             item->callback.func(item->callback.user_data, item->result);
 
@@ -337,7 +337,7 @@ int PPB_MessageLoop_push(PP_Resource message_loop, struct PP_CompletionCallback 
     /* find main thread */
     pthread_mutex_lock(&registry.lock);
 
-//    LOG1("message_loop=%d", message_loop);
+    LOG_T("message_loop=%d", message_loop);
 
     /* find message loop for main thread */
     if(!message_loop)
@@ -351,13 +351,13 @@ int PPB_MessageLoop_push(PP_Resource message_loop, struct PP_CompletionCallback 
             };
     };
 
-//    LOG1("message_loop=%d", message_loop);
+    LOG_T("message_loop=%d", message_loop);
 
     /* push into queue */
     if(message_loop <= 0)
     {
         r = PP_ERROR_BADRESOURCE;
-        LOG("message loop not found");
+        LOG_E("message loop not found");
     }
     else
     {
@@ -379,7 +379,7 @@ int PPB_MessageLoop_push(PP_Resource message_loop, struct PP_CompletionCallback 
             /* append it */
             ctx->items = item;
 
-            LOG1("{%d} msg_loop=%p, msg_loop->f_exit=%d, msg_loop->items=%p",
+            LOG_T("{%d} msg_loop=%p, msg_loop->f_exit=%d, msg_loop->items=%p",
                 message_loop, ctx, ctx->f_exit, ctx->items);
 
             pthread_cond_signal(&ctx->cond);
@@ -435,12 +435,11 @@ static int32_t PostQuit(PP_Resource message_loop, PP_Bool should_destroy)
             };
     };
 
-
     /* push into queue */
     if(message_loop <= 0)
     {
         r = PP_ERROR_BADRESOURCE;
-        LOG("message loop not found");
+        LOG_E("message loop not found");
     }
     else
     {

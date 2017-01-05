@@ -24,7 +24,7 @@ typedef struct ppb_var_deprecated_desc
 
 static void ppb_var_deprecated_destructor(ppb_var_deprecated_t* ctx)
 {
-    LOG("{%d}", ctx->self);
+    LOG_D("{%d}", ctx->self);
 };
 
 /**
@@ -68,7 +68,7 @@ static struct PP_Var GetProperty(struct PP_Var object,  struct PP_Var name,
 
     LOG_NP;
     q = VarToUtf8(name, &len);
-    LOG("name=[%s]", q);
+    LOG_E("name=[%s]", q);
 
     return PP_MakeUndefined();
 };
@@ -223,7 +223,7 @@ static struct PP_Var CreateObject(PP_Instance instance,
     struct PP_Var var;
     ppb_var_deprecated_t* dst;
 
-    LOG("object_class=%p, object_data=%p", object_class, object_data);
+    LOG_E("object_class=%p, object_data=%p", object_class, object_data);
 
     var.type = PP_VARTYPE_OBJECT;
     var.value.as_id = res_create(sizeof(ppb_var_deprecated_t), NULL, (res_destructor_t)ppb_var_deprecated_destructor);
@@ -248,7 +248,6 @@ static struct PP_Var CreateObjectWithModuleDeprecated(PP_Module module,
 
 static struct PP_Var VarFromUtf8_(PP_Module module, const char* data, uint32_t len)
 {
-    LOG("");
     return VarFromUtf8(data, len);
 };
 
