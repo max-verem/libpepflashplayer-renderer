@@ -16,8 +16,10 @@
 
 #define SWF_ARGS "line1=foo_url1&line2=bar_url2&line3=foo_url3&line4=bar_url4&param1=DEMO1%20LONG%20String"
 #define SWF_PATH "file:///usr/local/src/libpepflashplayer-renderer.git/tests/src"
+
 #define SWF_NAME "m1-lowerThird-1080i50.swf"
-//#define SWF_NAME "as3_test3.swf"
+//#define SWF_NAME "as3_test4.swf"
+
 //#define SWF_NAME "1080i50-blank_test_GPU.swf"
 //#define SWF_NAME "m1_logo_1080i50_BIG.swf"
 //#define SWF_NAME "m1_logo_1080i50.swf"
@@ -59,10 +61,6 @@ int main()
 
 //    log_level(100);
 
-//    struct PP_URLComponents_Dev comp;
-//    uriparser_parse("http://root:@demo1.com:1232/ho/ms/com?bla=123#paper", &comp);
-//    return 0;
-
     res_begin();
 
     instance_id = res_create(sizeof(instance_t), NULL, NULL);
@@ -97,10 +95,6 @@ LOG_N("msg_loop_interface->AttachToCurrentThread=%d", r);
 
         r = PPB_MessageLoop_main_thread = pthread_self();
 
-LOG_N("mod->instance_interface->DidChangeView....");
-//        mod->instance_interface->DidChangeView(inst->instance_id, inst->instance_id);
-LOG_N("mod->instance_interface->DidChangeView DONE");
-
 LOG_N("mod->instance_interface->DidCreate.....");
         r = mod->interface.instance->DidCreate(inst->instance_id, 2, argn, argv);
 LOG_N("mod->instance_interface->DidCreate=%d", r);
@@ -113,15 +107,11 @@ LOG_N("mod->instance_interface->DidCreate=%d", r);
         }
         else
             inst->private_instance_object = PP_MakeUndefined();
-
 LOG_N("mod->instance_private_interface=%p, inst->private_instance_object", mod->interface.instance_private);
 
 LOG_N("mod->instance_interface->DidChangeView...");
         mod->interface.instance->DidChangeView(inst->instance_id, inst->instance_id);
 LOG_N("mod->instance_interface->DidChangeView DONE");
-
-//        mod->instance_interface->DidChangeFocus(inst->instance_id, 1);
-//LOG_N("mod->instance_interface->DidChangeView DONE");
 
         if(inst->is_full_frame)
         {
@@ -153,6 +143,14 @@ LOG_N("mod->instance_interface->HandleDocumentLoad DONE");
 ////        mod->instance_interface->DidChangeView(inst->instance_id, inst->instance_id);
 
         signal(SIGINT, sighandler);
+
+LOG_N("mod->instance_interface->DidChangeView...");
+        mod->interface.instance->DidChangeView(inst->instance_id, inst->instance_id);
+LOG_N("mod->instance_interface->DidChangeView DONE");
+
+LOG_N("demo sleep....");
+sleep(5);
+LOG_N("\n\n\n\n\n\n\n....sleeping done");
 
 LOG_N("Run main loop...");
         r = mod->interface.message_loop->Run(inst->message_loop_id);

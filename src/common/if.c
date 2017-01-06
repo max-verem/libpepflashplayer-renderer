@@ -348,7 +348,7 @@ const void* get_browser_interface_proc(const char* interface_name)
 {
     const if_t* i;
 
-    LOG_D("interface_name=[%s]", interface_name);
+    LOG_T("interface_name=[%s]", interface_name);
 
     i = if_find(interface_name);
 

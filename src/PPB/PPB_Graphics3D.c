@@ -15,7 +15,7 @@
 #include <ppapi/c/ppb_graphics_3d.h>
 
 #include "log.h"
-
+#include "instance.h"
 #include "res.h"
 
 #include "PPB_Graphics3D.h"
@@ -154,6 +154,7 @@ static PP_Resource Create(PP_Instance instance, PP_Resource share_context, const
     CUresult e;
     CUcontext cu_ctx_pop;
     int i, major, minor, num_devices = 0;
+    instance_t* inst = (instance_t*)res_private(instance);
     int res = res_create(sizeof(graphics_3d_t), &PPB_Graphics3D_1_0_instance, (res_destructor_t)Destructor);
 
     int attribs[] =
@@ -170,8 +171,8 @@ static PP_Resource Create(PP_Instance instance, PP_Resource share_context, const
 
     int pbattribs[] =
     {
-        EGL_WIDTH, 1920,
-        EGL_HEIGHT, 1080,
+        EGL_WIDTH, inst->width,
+        EGL_HEIGHT, inst->height,
         EGL_NONE
     };
 
@@ -367,7 +368,7 @@ static PP_Resource Create(PP_Instance instance, PP_Resource share_context, const
 
     glGenBuffers(1, &graphics_3d->pbo);
     glBindBuffer(GL_PIXEL_UNPACK_BUFFER_ARB, graphics_3d->pbo);
-    glBufferData(GL_PIXEL_UNPACK_BUFFER_ARB, 1920 * 1080 * 4, 0, GL_STREAM_DRAW_ARB);
+    glBufferData(GL_PIXEL_UNPACK_BUFFER_ARB, inst->width * inst->height * 4, 0, GL_STREAM_DRAW_ARB);
     glBindBuffer(GL_PIXEL_UNPACK_BUFFER_ARB, 0);
 
     if(CUDA_SUCCESS != (e = cudaGraphicsGLRegisterBuffer
@@ -564,27 +565,17 @@ static int32_t SwapBuffers(PP_Resource context, struct PP_CompletionCallback cal
     int r;
     void * devPtr;
     size_t size;
-
     CUresult e;
     CUcontext cu_ctx_pop;
-
     graphics_3d_t* graphics_3d = (graphics_3d_t*)res_private(context);
-    int gWidth = 1920, gHeight = 1080;
-
-#if 0
-//    graphics_3d_t* graphics_3d = (graphics_3d_t*)res_private(context);
-
-    glPixelStorei(GL_PACK_ALIGNMENT, 1);
-    glReadPixels(0, 0, gWidth, gHeight, GL_RGBA, GL_UNSIGNED_BYTE, image);
-
-#endif
+    instance_t* inst = (instance_t*)res_private(graphics_3d->instance_id);
 
     // copy current buffer
     glBindBuffer(GL_PIXEL_PACK_BUFFER, graphics_3d->pbo);
     LOG_N("glBindBuffer(%d) done", graphics_3d->pbo);
     glPixelStorei(GL_PACK_ALIGNMENT, 1);
     LOG_N("glReadPixels(pbo=%d)...", graphics_3d->pbo);
-    glReadPixels(0, 0, gWidth, gHeight, GL_BGRA, GL_UNSIGNED_BYTE, 0);
+    glReadPixels(0, 0, inst->width, inst->height, GL_BGRA, GL_UNSIGNED_BYTE, 0);
     LOG_N("glReadPixels done");
     glBindBuffer(GL_PIXEL_PACK_BUFFER, 0);
     LOG_N("glBindBuffer(0) done");

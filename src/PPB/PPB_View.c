@@ -60,8 +60,8 @@ static PP_Bool GetRect(PP_Resource resource, struct PP_Rect* rect)
 
     rect->point.x = 0;
     rect->point.y = 0;
-    rect->size.width = 1920;
-    rect->size.height = 1080;
+    rect->size.width = inst->width;
+    rect->size.height = inst->height;
 
     LOG_TD;
 
@@ -189,8 +189,8 @@ static PP_Bool GetClipRect(PP_Resource resource, struct PP_Rect* clip)
 
     clip->point.x = 0;
     clip->point.y = 0;
-    clip->size.width = 1920;
-    clip->size.height = 1080;
+    clip->size.width = inst->width;
+    clip->size.height = inst->height;
 
     LOG_TD;
 

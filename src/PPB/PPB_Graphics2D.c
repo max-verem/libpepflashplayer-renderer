@@ -25,7 +25,6 @@ static PP_Resource Create(PP_Instance instance,
     const struct PP_Size* size, PP_Bool is_always_opaque)
 {
     int res = res_create(sizeof(graphics_2d_t), &PPB_Graphics2D_1_1_instance, (res_destructor_t)Destructor);
-
     graphics_2d_t* graphics_2d = (graphics_2d_t*)res_private(res);
 
     graphics_2d->instance_id = instance;
