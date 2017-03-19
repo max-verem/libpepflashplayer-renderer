@@ -17,8 +17,8 @@
 #define SWF_ARGS "line1=foo_url1&line2=bar_url2&line3=foo_url3&line4=bar_url4&param1=DEMO1%20LONG%20String"
 #define SWF_PATH "file:///usr/local/src/libpepflashplayer-renderer.git/tests/src"
 
-#define SWF_NAME "m1-lowerThird-1080i50.swf"
-//#define SWF_NAME "as3_test4.swf"
+//#define SWF_NAME "m1-lowerThird-1080i50.swf"
+#define SWF_NAME "as3_test4.swf"
 
 //#define SWF_NAME "1080i50-blank_test_GPU.swf"
 //#define SWF_NAME "m1_logo_1080i50_BIG.swf"
@@ -31,8 +31,8 @@
 const char* so_name = "/usr/local/src/libpepflashplayer-renderer.git/tests/libpepflashplayer.so-24.0.0.186-debug";
 const char* local_path = "/usr/local/src/libpepflashplayer-renderer.git/tests/local";
 
-const char* argn[] = { /* "src", */ "quality", /* "bgcolor", "width", "height",*/ "wmode", /* "flashvars", */ NULL};
-const char* argv[] = { /* SWF, */ "high", /* "#ece9d8",  "1920", "1080", */"transparent", /* "line1=foo_flashvars&line2=bar_flashvars", */ NULL};
+const char* argn[] = { /* "src", */ "quality", /* "bgcolor", "width", "height",*/ "wmode", "AllowScriptAccess", /* "flashvars", */ NULL};
+const char* argv[] = { /* SWF, */ "high", /* "#ece9d8",  "1920", "1080", */"transparent", "Always", /* "line1=foo_flashvars&line2=bar_flashvars", */ NULL};
 
 static void f1(void* user_data, int32_t result)
 {
@@ -96,18 +96,21 @@ LOG_N("msg_loop_interface->AttachToCurrentThread=%d", r);
         r = PPB_MessageLoop_main_thread = pthread_self();
 
 LOG_N("mod->instance_interface->DidCreate.....");
-        r = mod->interface.instance->DidCreate(inst->instance_id, 2, argn, argv);
+        r = mod->interface.instance->DidCreate(inst->instance_id, 3, argn, argv);
 LOG_N("mod->instance_interface->DidCreate=%d", r);
 
         mod->interface.instance_private =
             (struct PPP_Instance_Private_0_1*)mod->PPP_GetInterface(PPP_INSTANCE_PRIVATE_INTERFACE_0_1);
+LOG_N("mod->interface.instance_private=%p", mod->interface.instance_private);
         if(mod->interface.instance_private && mod->interface.instance_private->GetInstanceObject)
         {
+LOG_N("mod->interface.instance_private->GetInstanceObject=%p", mod->interface.instance_private->GetInstanceObject);
             inst->private_instance_object = mod->interface.instance_private->GetInstanceObject(inst->instance_id);
         }
         else
             inst->private_instance_object = PP_MakeUndefined();
-LOG_N("mod->instance_private_interface=%p, inst->private_instance_object", mod->interface.instance_private);
+LOG_N("inst->private_instance_object.type=%d", inst->private_instance_object.type);
+LOG_N("inst->private_instance_object.value.as_id=%d", (int)inst->private_instance_object.value.as_id);
 
 LOG_N("mod->instance_interface->DidChangeView...");
         mod->interface.instance->DidChangeView(inst->instance_id, inst->instance_id);
@@ -147,6 +150,17 @@ LOG_N("mod->instance_interface->HandleDocumentLoad DONE");
 LOG_N("mod->instance_interface->DidChangeView...");
         mod->interface.instance->DidChangeView(inst->instance_id, inst->instance_id);
 LOG_N("mod->instance_interface->DidChangeView DONE");
+
+LOG_N("will try to call dumb method");
+        {
+            struct PP_Var str;
+
+            str = VarFromUtf8_c("toggle_play");
+
+            mod->interface.var_depricated->Call(inst->private_instance_object, str, 0, NULL, NULL);
+
+            PPB_Var_Release(str);
+        };
 
 LOG_N("demo sleep....");
 sleep(5);

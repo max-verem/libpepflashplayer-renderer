@@ -58,6 +58,9 @@ int mod_load(mod_t** pmod, const char* so_name)
                     mod->interface.url_request_info =
                         (struct PPB_URLRequestInfo_1_0*)if_find(PPB_URLREQUESTINFO_INTERFACE_1_0)->ptr;
 
+                    mod->interface.var_depricated =
+                        (struct PPB_Var_Deprecated*)if_find(PPB_VAR_DEPRECATED_INTERFACE_0_3)->ptr;
+
                     return 0;
                 }
                 else

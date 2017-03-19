@@ -600,7 +600,7 @@ static int32_t SwapBuffers(PP_Resource context, struct PP_CompletionCallback cal
         LOG_N("cudaGraphicsResourceGetMappedPointer: devPtr=%p, size=%ld", devPtr, size);
 
         clock_gettime(CLOCK_MONOTONIC, &T1);
-//        cudaMemcpy(image, devPtr, size, cudaMemcpyDeviceToHost);
+        cudaMemcpy(image, devPtr, size, cudaMemcpyDeviceToHost);
         clock_gettime(CLOCK_MONOTONIC, &T2);
 
         t1 = T1.tv_sec * 1000000000LL + T1.tv_nsec * 1LL;

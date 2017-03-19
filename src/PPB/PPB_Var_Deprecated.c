@@ -9,11 +9,14 @@
 
 #include <ppapi/c/ppb_var.h>
 #include <ppapi/c/dev/ppb_var_deprecated.h>
+#include <ppapi/c/dev/ppp_class_deprecated.h>
 
 #include "log.h"
 #include "res.h"
 
 #include "PPB_Var.h"
+
+struct PPB_Var_Deprecated PPB_Var_Deprecated_instance;
 
 typedef struct ppb_var_deprecated_desc
 {
@@ -149,12 +152,21 @@ static void RemoveProperty(struct PP_Var object, struct PP_Var name,
  * Call(obj, VarFromUtf8("DoIt"), 0, NULL, NULL) = obj.DoIt() in JavaScript.
  * Call(obj, PP_MakeNull(), 0, NULL, NULL) = obj() in JavaScript.
  */
-static struct PP_Var Call(struct PP_Var object,
+static struct PP_Var Call(struct PP_Var var,
     struct PP_Var method_name, uint32_t argc, struct PP_Var* argv,
     struct PP_Var* exception)
 {
-    LOG_NP;
-    return PP_MakeInt32(0);
+    ppb_var_deprecated_t* dst;
+
+    if(var.type != PP_VARTYPE_OBJECT)
+        return PP_MakeUndefined();
+
+    if(res_interface(var.value.as_id) != &PPB_Var_Deprecated_instance)
+        return PP_MakeUndefined();
+
+    dst = (ppb_var_deprecated_t*)res_private(var.value.as_id);
+
+    return dst->object_class->Call(dst->object_data, method_name, argc, argv, exception);
 };
 
 
@@ -181,8 +193,23 @@ static struct PP_Var Construct(struct PP_Var object,
 static bool IsInstanceOf(struct PP_Var var,
     const struct PPP_Class_Deprecated* object_class, void** object_data)
 {
-    LOG_NP;
-    return 0;
+    ppb_var_deprecated_t* dst;
+
+    LOG_E("object_class=%p", object_class);
+
+    if(var.type != PP_VARTYPE_OBJECT)
+        return 0;
+
+    if(res_interface(var.value.as_id) != &PPB_Var_Deprecated_instance)
+        return 0;
+
+    dst = (ppb_var_deprecated_t*)res_private(var.value.as_id);
+    if(dst->object_class != object_class)
+        return 0;
+
+    *object_data = dst->object_data;
+
+    return 1;
 };
 
 
@@ -223,10 +250,10 @@ static struct PP_Var CreateObject(PP_Instance instance,
     struct PP_Var var;
     ppb_var_deprecated_t* dst;
 
-    LOG_E("object_class=%p, object_data=%p", object_class, object_data);
-
     var.type = PP_VARTYPE_OBJECT;
-    var.value.as_id = res_create(sizeof(ppb_var_deprecated_t), NULL, (res_destructor_t)ppb_var_deprecated_destructor);
+    var.value.as_id = res_create(sizeof(ppb_var_deprecated_t), &PPB_Var_Deprecated_instance, (res_destructor_t)ppb_var_deprecated_destructor);
+
+    LOG_E("object_class=%p, object_data=%p, var.value.as_id=%d", object_class, object_data, (int)var.value.as_id);
 
     dst = (ppb_var_deprecated_t*)res_private(var.value.as_id);
     dst->object_class = object_class;

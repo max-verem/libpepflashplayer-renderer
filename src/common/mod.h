@@ -13,6 +13,7 @@
 #include <ppapi/c/ppb_message_loop.h>
 #include <ppapi/c/ppb_url_loader.h>
 #include <ppapi/c/ppb_url_request_info.h>
+#include <ppapi/c/dev/ppb_var_deprecated.h>
 #include <ppapi/c/ppb_view.h>
 
 typedef struct mod_desc
@@ -28,6 +29,7 @@ typedef struct mod_desc
         const struct PPB_MessageLoop_1_0* message_loop;
         const struct PPB_URLLoader_1_0* url_loader;
         const struct PPB_URLRequestInfo_1_0* url_request_info;
+        const struct PPB_Var_Deprecated* var_depricated;
     } interface;
 } mod_t;
 

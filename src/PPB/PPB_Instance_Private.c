@@ -60,6 +60,11 @@ static struct PP_Var GetOwnerElementObject(PP_Instance instance)
 static struct PP_Var ExecuteScript(PP_Instance instance, struct PP_Var script, struct PP_Var* exception)
 {
     LOG_NP;
+
+    LOG_E("var.type=%d", script.type);
+    if(script.type == PP_VARTYPE_STRING)
+        LOG_E("var=[%s]", VarToUtf8(script, NULL));
+
     return PP_MakeInt32(0);
 };
 
