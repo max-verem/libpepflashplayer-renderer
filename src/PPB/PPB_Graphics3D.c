@@ -609,11 +609,11 @@ static int32_t ResizeBuffers(PP_Resource context, int32_t width, int32_t height)
  *
  */
 
-static int swaps = 0;
 static int32_t SwapBuffers(PP_Resource context, struct PP_CompletionCallback callback)
 {
-    void * devPtr;
-    size_t size;
+    int r;
+    void *devPtr, *shmPtr;
+    size_t devSize, shmSize;
     CUresult e;
     CUcontext cu_ctx_pop;
     graphics_3d_t* graphics_3d = (graphics_3d_t*)res_private(context);
@@ -633,42 +633,56 @@ static int32_t SwapBuffers(PP_Resource context, struct PP_CompletionCallback cal
         LOG_E("cuCtxCreate failed: %s", getCudaDrvErrorString(e));
     if(CUDA_SUCCESS != (e = cudaGraphicsMapResources(1, &graphics_3d->pbo_res, 0)))
         LOG_E("cudaGraphicsMapResources failed: %s", getCudaDrvErrorString(e));
-    if(CUDA_SUCCESS != (e = cudaGraphicsResourceGetMappedPointer(&devPtr, &size, graphics_3d->pbo_res)))
+    if(CUDA_SUCCESS != (e = cudaGraphicsResourceGetMappedPointer(&devPtr, &devSize, graphics_3d->pbo_res)))
     {
         LOG_E("cudaGraphicsResourceGetMappedPointer failed: %s", getCudaDrvErrorString(e));
     }
     else
     {
-        FILE *f;
-        int64_t t1, t2;
-        char path[PATH_MAX];
-        struct timespec T1, T2;
+        if(inst->pop_cuda_shmem_handle)
+        {
+            cudaIpcMemHandle_t handle;
 
-        GLubyte *image = calloc(1, size);
+            shmSize = devSize;
 
-        LOG_N("cudaGraphicsResourceGetMappedPointer: devPtr=%p, size=%ld", devPtr, size);
+//            if(CUDA_SUCCESS != (e = cudaSetDevice(graphics_3d->cu_dev)))
+//                LOG_E("cudaSetDevice(%d) failed: %s [%d]", graphics_3d->cu_dev, getCudaDrvErrorString(e), e);
 
-        clock_gettime(CLOCK_MONOTONIC, &T1);
-        cudaMemcpy(image, devPtr, size, cudaMemcpyDeviceToHost);
-        clock_gettime(CLOCK_MONOTONIC, &T2);
+            /* get handle */
+            r = inst->pop_cuda_shmem_handle(inst, &handle, &shmSize);
+            if(r)
+                LOG_E("inst->pop_cuda_shmem_handle(%p)=%d", inst, r);
+            else
+            {
+                /* open handle */
+                if(CUDA_SUCCESS != (e = cudaIpcOpenMemHandle(&shmPtr, handle, cudaIpcMemLazyEnablePeerAccess)))
+                    LOG_E("cudaIpcOpenMemHandle failed: %s [%d]", getCudaDrvErrorString(e), e);
+                else
+                {
+                    int64_t t1, t2;
 
-        t1 = T1.tv_sec * 1000000000LL + T1.tv_nsec * 1LL;
-        t2 = T2.tv_sec * 1000000000LL + T2.tv_nsec * 1LL;
+                    /* copy data */
+                    t1 = ticker_now();
+                    e = cudaMemcpy(shmPtr, devPtr, shmSize, cudaMemcpyDeviceToDevice);
+                    t2 = ticker_now();
+                    if(CUDA_SUCCESS != e)
+                        LOG_E("cudaMemcpy failed: %s", getCudaDrvErrorString(e));
+                    else
+                        LOG_N("cudaMemcpy: %d ns", (int)(t2 - t1));
 
-        LOG_N("cudaMemcpy: %d ns", (int)(t2 - t1));
+                    /* close handle */
+                    if(CUDA_SUCCESS != (e = cudaIpcCloseMemHandle(shmPtr)))
+                        LOG_E("cudaIpcCloseMemHandle failed: %s", getCudaDrvErrorString(e));
+                };
 
-        snprintf(path, sizeof(path), "/tmp/tracer-%.6d-%.6d.bin", getpid(), swaps++);
-#if 0
-        f = fopen(path, "wb");
-        fwrite(image, 1, size, f);
-        fclose(f);
-#endif
-        LOG_N("saved [%s]", path);
-
-        free(image);
+                /* push it back */
+                if(inst->push_cuda_shmem_handle)
+                    inst->push_cuda_shmem_handle(inst, &handle);
+            };
+        };
     };
     if(CUDA_SUCCESS != (e = cudaGraphicsUnmapResources(1, &graphics_3d->pbo_res, 0)))
-        LOG_E("cudaGraphicsUnmapResources failed: %s", getCudaDrvErrorString(e));
+        LOG_E("cudaGraphicsUnmapResources failed: %s [%d]", getCudaDrvErrorString(e), e);
     if(CUDA_SUCCESS != (e = cuCtxPopCurrent(&cu_ctx_pop)))
         LOG_E("cuCtxCreate failed: %s", getCudaDrvErrorString(e));
 

@@ -1,9 +1,16 @@
 #include <dlfcn.h>
 #include <stdint.h>
+#include <unistd.h>
 #include <stdio.h>
 #include <string.h>
 #include <pthread.h>
 #include <signal.h>
+#include <errno.h>
+
+#include <cuda.h>
+#include <cuda_runtime.h>
+#include <cuda_gl_interop.h>
+#include "drvapi_error_string.h"
 
 #include "log.h"
 #include "mod.h"
@@ -43,6 +50,7 @@ static mod_t* mod = NULL;
 
 instance_t* inst = NULL;
 
+
 static void sighandler(int sig)
 {
     int r = -1;
@@ -55,9 +63,67 @@ static void sighandler(int sig)
     LOG_N("r=%d", r);
 };
 
+static size_t shmSize = 1920 * 1080 * 4;
+static void* shmPtr = NULL;
+static cudaIpcMemHandle_t shmHandle;
+static CUcontext shmCU_CTX;
+static int shmCU_DEV = 0;
+
+static int pop_cuda_shmem_handle(struct instance_desc* inst, void* phandle, size_t* sz)
+{
+    LOG_N("inst=%p", inst);
+
+    *((cudaIpcMemHandle_t*)phandle) = shmHandle;
+    *sz = shmSize;
+
+    return 0;
+};
+
+static int push_cuda_shmem_handle(struct instance_desc* inst, void* phandle)
+{
+    LOG_N("inst=%p, phandle=%p", inst, phandle);
+    return 0;
+};
+
 int main()
 {
     int r, instance_id;
+
+    {
+        CUresult e;
+        CUcontext cu_ctx_pop;
+
+        if(CUDA_SUCCESS != (e = cuInit(0)))
+        {
+            LOG_E("cuInit failed");
+            return 0;
+        };
+
+        if(CUDA_SUCCESS != (e = cuCtxCreate(&shmCU_CTX, CU_CTX_BLOCKING_SYNC, shmCU_DEV)))
+        {
+            LOG_E("cuCtxCreate failed: %s", getCudaDrvErrorString(e));
+            return 0;
+        };
+
+        // init cuda data here
+        if(CUDA_SUCCESS != (e = cudaMalloc(&shmPtr, shmSize)))
+        {
+            LOG_E("cudaMalloc failed: %s", getCudaDrvErrorString(e));
+            return 0;
+        };
+
+        if(CUDA_SUCCESS != (e = cudaIpcGetMemHandle(&shmHandle, shmPtr)))
+        {
+            LOG_E("cudaIpcGetMemHandle failed: %s", getCudaDrvErrorString(e));
+            return 0;
+        };
+
+        if(CUDA_SUCCESS != (e = cuCtxPopCurrent(&cu_ctx_pop)))
+        {
+            LOG_E("cuCtxPopCurrent failed: %s", getCudaDrvErrorString(e));
+            return 0;
+        };
+    };
 
 //    log_level(100);
 
@@ -79,6 +145,8 @@ LOG_N("instance_id=%d", instance_id);
     inst->height = 1080;
     inst->is_full_screen = 0;
     inst->is_full_frame = 1;
+    inst->pop_cuda_shmem_handle = pop_cuda_shmem_handle;
+    inst->push_cuda_shmem_handle = push_cuda_shmem_handle;
 
     /* load module */
     r = mod_load(&mod, so_name);
@@ -188,6 +256,20 @@ LOG_PL;
 LOG_PL;
     res_end();
 LOG_PL;
+
+
+    {
+        CUresult e;
+
+        if(CUDA_SUCCESS != (e = cuCtxPushCurrent(shmCU_CTX)))
+            LOG_E("cuCtxPushCurrent failed: %s", getCudaDrvErrorString(e));
+
+        if(CUDA_SUCCESS != (e = cudaFree(shmPtr)))
+            LOG_E("cudaFree failed: %s", getCudaDrvErrorString(e));
+
+        if(CUDA_SUCCESS != (e = cuCtxDestroy(shmCU_CTX)))
+            LOG_E("cuCtxDestroy failed: %s", getCudaDrvErrorString(e));
+    };
 
     return 0;
 };

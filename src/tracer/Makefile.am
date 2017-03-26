@@ -1,6 +1,8 @@
 AM_LDFLAGS = -lm
 AM_CFLAGS = -fms-extensions \
+    @CUDA_CFLAGS@ \
     @PPAPI_CFLAGS@ \
+    -I$(top_srcdir)/src/cuda_samples/common/inc \
     -I$(top_srcdir)/src/pepper_obsolete \
     -I$(top_srcdir)/src/PPB \
     -I$(top_srcdir)/src/common
