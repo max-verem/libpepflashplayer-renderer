@@ -23,6 +23,42 @@
 
 #include "drvapi_error_string.h"
 
+static void* vsync_thread(void* p)
+{
+    int r;
+    struct PP_CompletionCallback* callback;
+    graphics_3d_t* graphics_3d = (graphics_3d_t*)p;
+
+    while(1)
+    {
+        /* wait */
+        ticker_wait(graphics_3d->vsync.ticker);
+
+        /* check callback value */
+        pthread_mutex_lock(&graphics_3d->vsync.lock);
+        callback = graphics_3d->vsync.callback;
+        graphics_3d->vsync.callback = NULL;
+        pthread_mutex_unlock(&graphics_3d->vsync.lock);
+
+        /* wait it NULL */
+        if(!callback)
+            continue;
+
+        /* finish */
+        if(callback == (void*)-1LL)
+            break;
+
+        /* send callback */
+        r = PPB_MessageLoop_push(0, *callback, 0, PP_OK);
+        LOG_N("PPB_MessageLoop_push'ed=%d", r);
+        free(callback);
+    };
+
+    LOG_D("finishing");
+
+    return NULL;
+};
+
 struct PPB_Graphics3D_1_0 PPB_Graphics3D_1_0_instance;
 
 static void Destructor(graphics_3d_t* graphics_3d)
@@ -30,6 +66,14 @@ static void Destructor(graphics_3d_t* graphics_3d)
     CUresult e;
 
     LOG_D("{%d}", graphics_3d->self);
+
+    /* stop vsync callback thread */
+    pthread_mutex_lock(&graphics_3d->vsync.lock);
+    graphics_3d->vsync.callback = (void*)-1LL;
+    pthread_mutex_unlock(&graphics_3d->vsync.lock);
+    pthread_join(graphics_3d->vsync.th, NULL);
+    pthread_mutex_destroy(&graphics_3d->vsync.lock);
+    ticker_release(&graphics_3d->vsync.ticker);
 
     if(CUDA_SUCCESS != (e = cuCtxPushCurrent(graphics_3d->cu_ctx)))
         LOG_E("cuCtxPushCurrent failed: %s", getCudaDrvErrorString(e));
@@ -372,7 +416,7 @@ static PP_Resource Create(PP_Instance instance, PP_Resource share_context, const
     glBindBuffer(GL_PIXEL_UNPACK_BUFFER_ARB, 0);
 
     if(CUDA_SUCCESS != (e = cudaGraphicsGLRegisterBuffer
-        (&graphics_3d->pbo_res, graphics_3d->pbo, cudaGraphicsMapFlagsWriteDiscard)))
+        (&graphics_3d->pbo_res, graphics_3d->pbo, cudaGraphicsMapFlagsReadOnly)))
     {
         LOG_E("cudaGraphicsGLRegisterBuffer failed: %s", getCudaDrvErrorString(e));
         res_release(res);
@@ -385,6 +429,12 @@ static PP_Resource Create(PP_Instance instance, PP_Resource share_context, const
         res_release(res);
         return 0;
     };
+
+    /* run vsync callback thread */
+    ticker_init(&graphics_3d->vsync.ticker, 1000000000LL / (int64_t)inst->fps);
+    pthread_mutex_init(&graphics_3d->vsync.lock, NULL);
+    pthread_create(&graphics_3d->vsync.th, NULL, vsync_thread, graphics_3d);
+
 
     return res;
 };
@@ -562,7 +612,6 @@ static int32_t ResizeBuffers(PP_Resource context, int32_t width, int32_t height)
 static int swaps = 0;
 static int32_t SwapBuffers(PP_Resource context, struct PP_CompletionCallback callback)
 {
-    int r;
     void * devPtr;
     size_t size;
     CUresult e;
@@ -623,9 +672,13 @@ static int32_t SwapBuffers(PP_Resource context, struct PP_CompletionCallback cal
     if(CUDA_SUCCESS != (e = cuCtxPopCurrent(&cu_ctx_pop)))
         LOG_E("cuCtxCreate failed: %s", getCudaDrvErrorString(e));
 
-    r = PPB_MessageLoop_push(0, callback, 0, PP_OK);
-
-    LOG_N("PPB_MessageLoop_push'ed=%d", r);
+    /* set callback */
+    pthread_mutex_lock(&graphics_3d->vsync.lock);
+    if(graphics_3d->vsync.callback && graphics_3d->vsync.callback != (void*)-1LL)
+        free(graphics_3d->vsync.callback);
+    graphics_3d->vsync.callback = (struct PP_CompletionCallback*)malloc(sizeof(struct PP_CompletionCallback));
+    *graphics_3d->vsync.callback = callback;
+    pthread_mutex_unlock(&graphics_3d->vsync.lock);
 
     return PP_OK;
 };

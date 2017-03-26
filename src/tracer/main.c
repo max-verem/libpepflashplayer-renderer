@@ -74,6 +74,7 @@ LOG_N("instance_id=%d", instance_id);
     strncpy(inst->paths.Local, local_path, PATH_MAX);
     strncpy(inst->paths.DocumentURL, SWF_PATH, PATH_MAX);
     strncpy(inst->paths.PluginInstanceURL, SWF_PATH "/" SWF_NAME "?" SWF_ARGS, PATH_MAX);
+    inst->fps = 50;
     inst->width = 1920;
     inst->height = 1080;
     inst->is_full_screen = 0;
@@ -163,7 +164,7 @@ LOG_N("will try to call dumb method");
         };
 
 LOG_N("demo sleep....");
-sleep(5);
+sleep(1);
 LOG_N("\n\n\n\n\n\n\n....sleeping done");
 
 LOG_N("Run main loop...");

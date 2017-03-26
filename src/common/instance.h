@@ -15,7 +15,7 @@ typedef struct instance_desc
         char PluginInstanceURL[PATH_MAX];
         char Local[PATH_MAX];
     } paths;
-    int width, height;
+    int width, height, fps;
     PP_Resource message_loop_id;
     PP_Instance instance_id;
     struct PP_Var private_instance_object;

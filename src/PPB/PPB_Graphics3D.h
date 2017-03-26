@@ -15,6 +15,9 @@
 #include <cuda_runtime.h>
 #include <cuda_gl_interop.h>
 
+#include <pthread.h>
+#include "ticker.h"
+
 typedef struct graphics_3d_desc
 {
     PP_Instance instance_id;
@@ -36,6 +39,14 @@ typedef struct graphics_3d_desc
     CUdevice cu_dev;
     struct cudaGraphicsResource* pbo_res;
     unsigned int pbo;
+
+    struct
+    {
+        pthread_t th;
+        pthread_mutex_t lock;
+        ticker_t *ticker;
+        struct PP_CompletionCallback *callback;
+    } vsync;
 } graphics_3d_t;
 
 #endif /*PPB_Graphics2D.h */
