@@ -9,6 +9,7 @@ bin_PROGRAMS = tracer
 
 tracer_SOURCES = \
     main.c \
+    $(top_srcdir)/src/common/ticker.c \
     $(top_srcdir)/src/common/if.c \
     $(top_srcdir)/src/common/log.c \
     $(top_srcdir)/src/common/mod.c \
