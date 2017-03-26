@@ -639,46 +639,31 @@ static int32_t SwapBuffers(PP_Resource context, struct PP_CompletionCallback cal
     }
     else
     {
-        if(inst->pop_cuda_shmem_handle)
+        if(inst->pop_cuda_shmem)
         {
-            cudaIpcMemHandle_t handle;
-
             shmSize = devSize;
 
-//            if(CUDA_SUCCESS != (e = cudaSetDevice(graphics_3d->cu_dev)))
-//                LOG_E("cudaSetDevice(%d) failed: %s [%d]", graphics_3d->cu_dev, getCudaDrvErrorString(e), e);
-
             /* get handle */
-            r = inst->pop_cuda_shmem_handle(inst, &handle, &shmSize);
+            r = inst->pop_cuda_shmem(inst, &shmPtr, &shmSize);
             if(r)
                 LOG_E("inst->pop_cuda_shmem_handle(%p)=%d", inst, r);
             else
             {
-                /* open handle */
-                if(CUDA_SUCCESS != (e = cudaIpcOpenMemHandle(&shmPtr, handle, cudaIpcMemLazyEnablePeerAccess)))
-                    LOG_E("cudaIpcOpenMemHandle failed: %s [%d]", getCudaDrvErrorString(e), e);
+                int64_t t1, t2;
+
+                /* copy data */
+                t1 = ticker_now();
+                e = cudaMemcpy(shmPtr, devPtr, shmSize, cudaMemcpyDeviceToDevice);
+                t2 = ticker_now();
+                if(CUDA_SUCCESS != e)
+                    LOG_E("cudaMemcpy failed: %s", getCudaDrvErrorString(e));
                 else
-                {
-                    int64_t t1, t2;
-
-                    /* copy data */
-                    t1 = ticker_now();
-                    e = cudaMemcpy(shmPtr, devPtr, shmSize, cudaMemcpyDeviceToDevice);
-                    t2 = ticker_now();
-                    if(CUDA_SUCCESS != e)
-                        LOG_E("cudaMemcpy failed: %s", getCudaDrvErrorString(e));
-                    else
-                        LOG_N("cudaMemcpy: %d ns", (int)(t2 - t1));
-
-                    /* close handle */
-                    if(CUDA_SUCCESS != (e = cudaIpcCloseMemHandle(shmPtr)))
-                        LOG_E("cudaIpcCloseMemHandle failed: %s", getCudaDrvErrorString(e));
-                };
-
-                /* push it back */
-                if(inst->push_cuda_shmem_handle)
-                    inst->push_cuda_shmem_handle(inst, &handle);
+                    LOG_N("cudaMemcpy: %d ns", (int)(t2 - t1));
             };
+
+            /* push it back */
+            if(inst->push_cuda_shmem)
+                inst->push_cuda_shmem(inst, &shmPtr);
         };
     };
     if(CUDA_SUCCESS != (e = cudaGraphicsUnmapResources(1, &graphics_3d->pbo_res, 0)))

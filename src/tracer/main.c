@@ -65,23 +65,22 @@ static void sighandler(int sig)
 
 static size_t shmSize = 1920 * 1080 * 4;
 static void* shmPtr = NULL;
-static cudaIpcMemHandle_t shmHandle;
 static CUcontext shmCU_CTX;
 static int shmCU_DEV = 0;
 
-static int pop_cuda_shmem_handle(struct instance_desc* inst, void* phandle, size_t* sz)
+static int pop_cuda_shmem(struct instance_desc* inst, void** pPtr, size_t* sz)
 {
     LOG_N("inst=%p", inst);
 
-    *((cudaIpcMemHandle_t*)phandle) = shmHandle;
+    *pPtr = shmPtr;
     *sz = shmSize;
 
     return 0;
 };
 
-static int push_cuda_shmem_handle(struct instance_desc* inst, void* phandle)
+static int push_cuda_shmem(struct instance_desc* inst, void** phandle)
 {
-    LOG_N("inst=%p, phandle=%p", inst, phandle);
+    LOG_N("inst=%p", inst);
     return 0;
 };
 
@@ -112,12 +111,6 @@ int main()
             return 0;
         };
 
-        if(CUDA_SUCCESS != (e = cudaIpcGetMemHandle(&shmHandle, shmPtr)))
-        {
-            LOG_E("cudaIpcGetMemHandle failed: %s", getCudaDrvErrorString(e));
-            return 0;
-        };
-
         if(CUDA_SUCCESS != (e = cuCtxPopCurrent(&cu_ctx_pop)))
         {
             LOG_E("cuCtxPopCurrent failed: %s", getCudaDrvErrorString(e));
@@ -145,8 +138,8 @@ LOG_N("instance_id=%d", instance_id);
     inst->height = 1080;
     inst->is_full_screen = 0;
     inst->is_full_frame = 1;
-    inst->pop_cuda_shmem_handle = pop_cuda_shmem_handle;
-    inst->push_cuda_shmem_handle = push_cuda_shmem_handle;
+    inst->pop_cuda_shmem = pop_cuda_shmem;
+    inst->push_cuda_shmem = push_cuda_shmem;
 
     /* load module */
     r = mod_load(&mod, so_name);

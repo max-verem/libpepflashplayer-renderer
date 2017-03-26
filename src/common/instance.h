@@ -24,8 +24,8 @@ typedef struct instance_desc
     PP_Resource graphics_id;
     struct PP_Var object;
 //    const struct PPP_Class_Deprecated* object_class;
-    int (*pop_cuda_shmem_handle)(struct instance_desc*, void*, size_t* sz);
-    int (*push_cuda_shmem_handle)(struct instance_desc*, void*);
+    int (*pop_cuda_shmem)(struct instance_desc*, void**, size_t* sz);
+    int (*push_cuda_shmem)(struct instance_desc*, void**);
 } instance_t;
 
 #endif /* INSTANCE_H */
