@@ -3,7 +3,7 @@ dnl autoreconf --force --install ; ./configure ; make
 dnl
 
 AC_INIT([libpepflashplayer-renderer], [0.1])
-AM_INIT_AUTOMAKE([no-dependencies foreign])
+AM_INIT_AUTOMAKE([foreign])
 AM_CONFIG_HEADER(config.h)
 AM_MAINTAINER_MODE
 AC_PROG_RANLIB
