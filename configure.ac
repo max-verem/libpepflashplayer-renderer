@@ -58,6 +58,24 @@ AC_SUBST(CUDA_CFLAGS)
 CUDA_LIBS="-L$CUDA_PATH/lib64 -lcuda -lcudart"
 AC_SUBST(CUDA_LIBS)
 
+AC_ARG_WITH([ndi],
+        [AS_HELP_STRING([--with-ndi=path], [path to NDI sdk])],
+        [NDI_PATH=$withval],
+        [NDI_PATH=/usr/local/ndi])
+AC_SUBST(NDI_PATH)
+
+NDI_CFLAGS="-I$NDI_PATH/include"
+AC_SUBST(NDI_CFLAGS)
+
+NDI_LIBS="-L$NDI_PATH/lib -lndi"
+AC_SUBST(NDI_LIBS)
+
+NVCC="$CUDA_PATH/bin/nvcc"
+AC_SUBST(NVCC)
+
+STD_CFLAGS="-std=gnu99"
+AC_SUBST(STD_CFLAGS)
+
 AM_PATH_XML2(2.4.0)
 
 dnl Use -Wall if we have gcc.

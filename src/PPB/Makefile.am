@@ -55,6 +55,7 @@ libPPB_a_SOURCES = \
     PPB_View.c
 
 AM_CPPFLAGS = \
+    @STD_CFLAGS@ \
     @CUDA_CFLAGS@ \
     @PPAPI_CFLAGS@ \
     -I$(top_srcdir)/src/pepper_obsolete \

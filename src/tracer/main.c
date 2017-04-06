@@ -6,11 +6,7 @@
 #include <pthread.h>
 #include <signal.h>
 #include <errno.h>
-
-#include <cuda.h>
-#include <cuda_runtime.h>
-#include <cuda_gl_interop.h>
-#include "drvapi_error_string.h"
+#include <pthread.h>
 
 #include "log.h"
 #include "mod.h"
@@ -25,7 +21,7 @@
 #define SWF_PATH "file:///usr/local/src/libpepflashplayer-renderer.git/tests/src"
 
 //#define SWF_NAME "m1-lowerThird-1080i50.swf"
-#define SWF_NAME "as3_test4.swf"
+//#define SWF_NAME "as3_test4.swf"
 
 //#define SWF_NAME "1080i50-blank_test_GPU.swf"
 //#define SWF_NAME "m1_logo_1080i50_BIG.swf"
@@ -34,8 +30,10 @@
 //#define SWF_NAME "demo1_2_movie.swf"
 //#define SWF_NAME "demo1_2_image.swf"
 //#define SWF_NAME "demo2.swf"
+#define SWF_NAME "transparent_CG_100_percents_coverage_v2_01.swf"
 
-const char* so_name = "/usr/local/src/libpepflashplayer-renderer.git/tests/libpepflashplayer.so-24.0.0.186-debug";
+//const char* so_name = "/usr/local/src/libpepflashplayer-renderer.git/tests/libpepflashplayer.so-24.0.0.186-debug";
+const char* so_name = "/usr/local/src/libpepflashplayer-renderer.git/tests/libpepflashplayer.so-25.0.0.143-debug";
 const char* local_path = "/usr/local/src/libpepflashplayer-renderer.git/tests/local";
 
 const char* argn[] = { /* "src", */ "quality", /* "bgcolor", "width", "height",*/ "wmode", "AllowScriptAccess", /* "flashvars", */ NULL};
@@ -50,7 +48,6 @@ static mod_t* mod = NULL;
 
 instance_t* inst = NULL;
 
-
 static void sighandler(int sig)
 {
     int r = -1;
@@ -63,60 +60,12 @@ static void sighandler(int sig)
     LOG_N("r=%d", r);
 };
 
-static size_t shmSize = 1920 * 1080 * 4;
-static void* shmPtr = NULL;
-static CUcontext shmCU_CTX;
-static int shmCU_DEV = 0;
-
-static int pop_cuda_shmem(struct instance_desc* inst, void** pPtr, size_t* sz)
-{
-    LOG_N("inst=%p", inst);
-
-    *pPtr = shmPtr;
-    *sz = shmSize;
-
-    return 0;
-};
-
-static int push_cuda_shmem(struct instance_desc* inst, void** phandle)
-{
-    LOG_N("inst=%p", inst);
-    return 0;
-};
+#include "app.h"
 
 int main()
 {
+    app_t* app_data;
     int r, instance_id;
-
-    {
-        CUresult e;
-        CUcontext cu_ctx_pop;
-
-        if(CUDA_SUCCESS != (e = cuInit(0)))
-        {
-            LOG_E("cuInit failed");
-            return 0;
-        };
-
-        if(CUDA_SUCCESS != (e = cuCtxCreate(&shmCU_CTX, CU_CTX_BLOCKING_SYNC, shmCU_DEV)))
-        {
-            LOG_E("cuCtxCreate failed: %s", getCudaDrvErrorString(e));
-            return 0;
-        };
-
-        // init cuda data here
-        if(CUDA_SUCCESS != (e = cudaMalloc(&shmPtr, shmSize)))
-        {
-            LOG_E("cudaMalloc failed: %s", getCudaDrvErrorString(e));
-            return 0;
-        };
-
-        if(CUDA_SUCCESS != (e = cuCtxPopCurrent(&cu_ctx_pop)))
-        {
-            LOG_E("cuCtxPopCurrent failed: %s", getCudaDrvErrorString(e));
-            return 0;
-        };
-    };
 
 //    log_level(100);
 
@@ -138,8 +87,8 @@ LOG_N("instance_id=%d", instance_id);
     inst->height = 1080;
     inst->is_full_screen = 0;
     inst->is_full_frame = 1;
-    inst->pop_cuda_shmem = pop_cuda_shmem;
-    inst->push_cuda_shmem = push_cuda_shmem;
+
+    app_create(&app_data, inst);
 
     /* load module */
     r = mod_load(&mod, so_name);
@@ -224,6 +173,10 @@ LOG_N("will try to call dumb method");
             PPB_Var_Release(str);
         };
 
+LOG_N("will run reader thread");
+        app_run(app_data);
+
+
 LOG_N("demo sleep....");
 sleep(1);
 LOG_N("\n\n\n\n\n\n\n....sleeping done");
@@ -231,6 +184,10 @@ LOG_N("\n\n\n\n\n\n\n....sleeping done");
 LOG_N("Run main loop...");
         r = mod->interface.message_loop->Run(inst->message_loop_id);
 LOG_N("Exiting...");
+
+
+LOG_N("will STOP reader thread");
+        app_stop(app_data);
 
         PPB_Var_Release(inst->private_instance_object);
 LOG_PL;
@@ -244,25 +201,14 @@ LOG_PL;
         mod_release(&mod);
 LOG_PL;
     };
+
+LOG_PL;
+    app_destroy(&app_data);
 LOG_PL;
     res_release(instance_id);
 LOG_PL;
     res_end();
 LOG_PL;
-
-
-    {
-        CUresult e;
-
-        if(CUDA_SUCCESS != (e = cuCtxPushCurrent(shmCU_CTX)))
-            LOG_E("cuCtxPushCurrent failed: %s", getCudaDrvErrorString(e));
-
-        if(CUDA_SUCCESS != (e = cudaFree(shmPtr)))
-            LOG_E("cudaFree failed: %s", getCudaDrvErrorString(e));
-
-        if(CUDA_SUCCESS != (e = cuCtxDestroy(shmCU_CTX)))
-            LOG_E("cuCtxDestroy failed: %s", getCudaDrvErrorString(e));
-    };
 
     return 0;
 };

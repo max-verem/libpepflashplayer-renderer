@@ -25,33 +25,42 @@
 
 static void* vsync_thread(void* p)
 {
-    int r;
+    int r = 0;
+    void* ptr;
     struct PP_CompletionCallback* callback;
     graphics_3d_t* graphics_3d = (graphics_3d_t*)p;
+    instance_t* inst = (instance_t*)res_private(graphics_3d->instance_id);
 
     while(1)
     {
         /* wait */
         ticker_wait(graphics_3d->vsync.ticker);
+        LOG_N("ticker_wait(%d)", r);
 
         /* check callback value */
         pthread_mutex_lock(&graphics_3d->vsync.lock);
         callback = graphics_3d->vsync.callback;
         graphics_3d->vsync.callback = NULL;
+        ptr = graphics_3d->vsync.ptr;
+        graphics_3d->vsync.ptr = NULL;
         pthread_mutex_unlock(&graphics_3d->vsync.lock);
-
-        /* wait it NULL */
-        if(!callback)
-            continue;
 
         /* finish */
         if(callback == (void*)-1LL)
             break;
 
-        /* send callback */
-        r = PPB_MessageLoop_push(0, *callback, 0, PP_OK);
-        LOG_N("PPB_MessageLoop_push'ed=%d", r);
-        free(callback);
+        /* wait it NULL */
+        if(callback)
+        {
+            /* send callback */
+            r = PPB_MessageLoop_push(0, *callback, 0, PP_OK);
+            LOG_N("PPB_MessageLoop_push'ed=%d", r);
+            free(callback);
+        };
+
+        /* push it back */
+        if(inst->buffer_swap_end)
+            inst->buffer_swap_end(inst->app_data, &ptr);
     };
 
     LOG_D("finishing");
@@ -63,6 +72,7 @@ struct PPB_Graphics3D_1_0 PPB_Graphics3D_1_0_instance;
 
 static void Destructor(graphics_3d_t* graphics_3d)
 {
+    int i;
     CUresult e;
 
     LOG_D("{%d}", graphics_3d->self);
@@ -78,10 +88,11 @@ static void Destructor(graphics_3d_t* graphics_3d)
     if(CUDA_SUCCESS != (e = cuCtxPushCurrent(graphics_3d->cu_ctx)))
         LOG_E("cuCtxPushCurrent failed: %s", getCudaDrvErrorString(e));
 
-    if(CUDA_SUCCESS != (e = cudaGraphicsUnregisterResource(graphics_3d->pbo_res)))
-        LOG_E("cudaGraphicsUnregisterResource failed: %s", getCudaDrvErrorString(e));
+    for(i = 0; i < PBO_RING_LEN; i++)
+        if(CUDA_SUCCESS != (e = cudaGraphicsUnregisterResource(graphics_3d->pbo_res[i])))
+            LOG_E("cudaGraphicsUnregisterResource failed: %s", getCudaDrvErrorString(e));
 
-    glDeleteBuffers(1, &graphics_3d->pbo);
+    glDeleteBuffers(PBO_RING_LEN, graphics_3d->pbo);
 
     if(CUDA_SUCCESS != (e = cuCtxDestroy(graphics_3d->cu_ctx)))
         LOG_E("cuCtxDestroy failed: %s", getCudaDrvErrorString(e));
@@ -410,17 +421,20 @@ static PP_Resource Create(PP_Instance instance, PP_Resource share_context, const
         return 0;
     };
 
-    glGenBuffers(1, &graphics_3d->pbo);
-    glBindBuffer(GL_PIXEL_UNPACK_BUFFER_ARB, graphics_3d->pbo);
-    glBufferData(GL_PIXEL_UNPACK_BUFFER_ARB, inst->width * inst->height * 4, 0, GL_STREAM_DRAW_ARB);
-    glBindBuffer(GL_PIXEL_UNPACK_BUFFER_ARB, 0);
-
-    if(CUDA_SUCCESS != (e = cudaGraphicsGLRegisterBuffer
-        (&graphics_3d->pbo_res, graphics_3d->pbo, cudaGraphicsMapFlagsReadOnly)))
+    glGenBuffers(PBO_RING_LEN, graphics_3d->pbo);
+    for(i = 0; i < PBO_RING_LEN; i++)
     {
-        LOG_E("cudaGraphicsGLRegisterBuffer failed: %s", getCudaDrvErrorString(e));
-        res_release(res);
-        return 0;
+        glBindBuffer(GL_PIXEL_UNPACK_BUFFER_ARB, graphics_3d->pbo[i]);
+        glBufferData(GL_PIXEL_UNPACK_BUFFER_ARB, inst->width * inst->height * 4, 0, GL_STREAM_DRAW_ARB);
+        glBindBuffer(GL_PIXEL_UNPACK_BUFFER_ARB, 0);
+
+        if(CUDA_SUCCESS != (e = cudaGraphicsGLRegisterBuffer
+            (&graphics_3d->pbo_res[i], graphics_3d->pbo[i], cudaGraphicsMapFlagsReadOnly)))
+        {
+            LOG_E("cudaGraphicsGLRegisterBuffer failed: %s", getCudaDrvErrorString(e));
+            res_release(res);
+            return 0;
+        };
     };
 
     if(CUDA_SUCCESS != (e = cuCtxPopCurrent(&cu_ctx_pop)))
@@ -611,19 +625,23 @@ static int32_t ResizeBuffers(PP_Resource context, int32_t width, int32_t height)
 
 static int32_t SwapBuffers(PP_Resource context, struct PP_CompletionCallback callback)
 {
-    int r;
-    void *devPtr, *shmPtr;
+    int r, i_r, i_w;
+    void *devPtr, *shmPtr = NULL;
     size_t devSize, shmSize;
     CUresult e;
     CUcontext cu_ctx_pop;
     graphics_3d_t* graphics_3d = (graphics_3d_t*)res_private(context);
     instance_t* inst = (instance_t*)res_private(graphics_3d->instance_id);
 
+    i_r = (graphics_3d->ring_idx) % PBO_RING_LEN;
+    i_w = (graphics_3d->ring_idx + 1) % PBO_RING_LEN;
+    graphics_3d->ring_idx++;
+
     // copy current buffer
-    glBindBuffer(GL_PIXEL_PACK_BUFFER, graphics_3d->pbo);
-    LOG_N("glBindBuffer(%d) done", graphics_3d->pbo);
+    glBindBuffer(GL_PIXEL_PACK_BUFFER, graphics_3d->pbo[i_r]);
+    LOG_N("glBindBuffer(%d) done, i_r=%d, PBO_RING_LEN=%d", graphics_3d->pbo[i_r], i_r, PBO_RING_LEN);
     glPixelStorei(GL_PACK_ALIGNMENT, 1);
-    LOG_N("glReadPixels(pbo=%d)...", graphics_3d->pbo);
+    LOG_N("glReadPixels(pbo=%d)...", graphics_3d->pbo[i_r]);
     glReadPixels(0, 0, inst->width, inst->height, GL_BGRA, GL_UNSIGNED_BYTE, 0);
     LOG_N("glReadPixels done");
     glBindBuffer(GL_PIXEL_PACK_BUFFER, 0);
@@ -631,22 +649,22 @@ static int32_t SwapBuffers(PP_Resource context, struct PP_CompletionCallback cal
 
     if(CUDA_SUCCESS != (e = cuCtxPushCurrent(graphics_3d->cu_ctx)))
         LOG_E("cuCtxCreate failed: %s", getCudaDrvErrorString(e));
-    if(CUDA_SUCCESS != (e = cudaGraphicsMapResources(1, &graphics_3d->pbo_res, 0)))
+    if(CUDA_SUCCESS != (e = cudaGraphicsMapResources(1, &graphics_3d->pbo_res[i_w], 0)))
         LOG_E("cudaGraphicsMapResources failed: %s", getCudaDrvErrorString(e));
-    if(CUDA_SUCCESS != (e = cudaGraphicsResourceGetMappedPointer(&devPtr, &devSize, graphics_3d->pbo_res)))
+    if(CUDA_SUCCESS != (e = cudaGraphicsResourceGetMappedPointer(&devPtr, &devSize, graphics_3d->pbo_res[i_w])))
     {
         LOG_E("cudaGraphicsResourceGetMappedPointer failed: %s", getCudaDrvErrorString(e));
     }
     else
     {
-        if(inst->pop_cuda_shmem)
+        if(inst->buffer_swap_begin)
         {
             shmSize = devSize;
 
             /* get handle */
-            r = inst->pop_cuda_shmem(inst, &shmPtr, &shmSize);
-            if(r)
-                LOG_E("inst->pop_cuda_shmem_handle(%p)=%d", inst, r);
+            r = inst->buffer_swap_begin(inst->app_data, &shmPtr, &shmSize);
+            if(r < 0)
+                LOG_E("inst->buffer_swap_begin(%p)=%d", inst, r);
             else
             {
                 int64_t t1, t2;
@@ -660,13 +678,9 @@ static int32_t SwapBuffers(PP_Resource context, struct PP_CompletionCallback cal
                 else
                     LOG_N("cudaMemcpy: %d ns", (int)(t2 - t1));
             };
-
-            /* push it back */
-            if(inst->push_cuda_shmem)
-                inst->push_cuda_shmem(inst, &shmPtr);
         };
     };
-    if(CUDA_SUCCESS != (e = cudaGraphicsUnmapResources(1, &graphics_3d->pbo_res, 0)))
+    if(CUDA_SUCCESS != (e = cudaGraphicsUnmapResources(1, &graphics_3d->pbo_res[i_w], 0)))
         LOG_E("cudaGraphicsUnmapResources failed: %s [%d]", getCudaDrvErrorString(e), e);
     if(CUDA_SUCCESS != (e = cuCtxPopCurrent(&cu_ctx_pop)))
         LOG_E("cuCtxCreate failed: %s", getCudaDrvErrorString(e));
@@ -677,6 +691,7 @@ static int32_t SwapBuffers(PP_Resource context, struct PP_CompletionCallback cal
         free(graphics_3d->vsync.callback);
     graphics_3d->vsync.callback = (struct PP_CompletionCallback*)malloc(sizeof(struct PP_CompletionCallback));
     *graphics_3d->vsync.callback = callback;
+    graphics_3d->vsync.ptr = shmPtr;
     pthread_mutex_unlock(&graphics_3d->vsync.lock);
 
     return PP_OK;

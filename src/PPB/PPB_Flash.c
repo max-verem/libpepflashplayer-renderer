@@ -108,7 +108,7 @@ static struct PP_Var GetSetting(PP_Instance instance, PP_FlashSetting setting)
             break;
 
         LOG_GetSetting_case(PP_FLASHSETTING_NUMCORES);
-            r = PP_MakeInt32(sysconf(_SC_NPROCESSORS_ONLN));
+            r = PP_MakeInt32(8 /*sysconf(_SC_NPROCESSORS_ONLN)*/);
             break;
 
         LOG_GetSetting_case(PP_FLASHSETTING_LSORESTRICTIONS);

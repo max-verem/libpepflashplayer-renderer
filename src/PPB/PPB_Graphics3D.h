@@ -18,6 +18,8 @@
 #include <pthread.h>
 #include "ticker.h"
 
+#define PBO_RING_LEN 2
+
 typedef struct graphics_3d_desc
 {
     PP_Instance instance_id;
@@ -37,8 +39,9 @@ typedef struct graphics_3d_desc
 
     CUcontext cu_ctx;
     CUdevice cu_dev;
-    struct cudaGraphicsResource* pbo_res;
-    unsigned int pbo;
+    struct cudaGraphicsResource* pbo_res[PBO_RING_LEN];
+    unsigned int pbo[PBO_RING_LEN];
+    uint64_t ring_idx;
 
     struct
     {
@@ -46,6 +49,7 @@ typedef struct graphics_3d_desc
         pthread_mutex_t lock;
         ticker_t *ticker;
         struct PP_CompletionCallback *callback;
+        void* ptr;
     } vsync;
 } graphics_3d_t;
 

@@ -6,7 +6,7 @@
 #include <ppapi/c/pp_var.h>
 #include <ppapi/c/pp_instance.h>
 #include <ppapi/c/pp_resource.h>
-//#include <ppapi/c/dev/ppp_class_deprecated.h>
+#include <ppapi/c/dev/ppp_class_deprecated.h>
 
 typedef struct instance_desc
 {
@@ -23,9 +23,10 @@ typedef struct instance_desc
     int is_full_frame, is_full_screen;
     PP_Resource graphics_id;
     struct PP_Var object;
-//    const struct PPP_Class_Deprecated* object_class;
-    int (*pop_cuda_shmem)(struct instance_desc*, void**, size_t* sz);
-    int (*push_cuda_shmem)(struct instance_desc*, void**);
+    const struct PPP_Class_Deprecated* object_class;
+    int (*buffer_swap_begin)(void *app_data, void**, size_t* sz);
+    int (*buffer_swap_end)(void *app_data, void**);
+    void* app_data;
 } instance_t;
 
 #endif /* INSTANCE_H */
