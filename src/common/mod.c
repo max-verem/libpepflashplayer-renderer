@@ -9,6 +9,8 @@
 #include "if.h"
 #include "res.h"
 
+#include <ppapi/c/ppb_var_array_buffer.h>
+
 static void mod_destructor(void* p)
 {
     mod_t* mod = (mod_t*)p;
@@ -44,22 +46,8 @@ int mod_load(mod_t** pmod, const char* so_name)
                 {
                     *pmod = mod;
 
-                    /* load interfaces */
-
-                    mod->interface.message_loop =
-                        (struct PPB_MessageLoop_1_0*)if_find(PPB_MESSAGELOOP_INTERFACE_1_0)->ptr;
-
                     mod->interface.instance_private =
                         (struct PPP_Instance_Private_0_1*)mod->PPP_GetInterface(PPP_INSTANCE_PRIVATE_INTERFACE_0_1);
-
-                    mod->interface.url_loader =
-                        (struct PPB_URLLoader_1_0*)if_find(PPB_URLLOADER_INTERFACE_1_0)->ptr;
-
-                    mod->interface.url_request_info =
-                        (struct PPB_URLRequestInfo_1_0*)if_find(PPB_URLREQUESTINFO_INTERFACE_1_0)->ptr;
-
-                    mod->interface.var_depricated =
-                        (struct PPB_Var_Deprecated*)if_find(PPB_VAR_DEPRECATED_INTERFACE_0_3)->ptr;
 
                     return 0;
                 }

@@ -1,6 +1,9 @@
 noinst_LIBRARIES = libPPB.a
 
 libPPB_a_SOURCES = \
+    PPB_VarDictionary.c \
+    PPB_VarArrayBuffer.c \
+    PPB_VarArray.c \
     PPB_Audio.c \
     PPB_AudioConfig.c \
     PPB_AudioInput_Dev.c \

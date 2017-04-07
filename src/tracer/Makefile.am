@@ -15,6 +15,7 @@ tracer_SOURCES = \
     main.c \
     app.c \
     app_buf.c \
+    app_class.c \
     app_cuda.cu \
     $(top_srcdir)/src/common/ticker.c \
     $(top_srcdir)/src/common/if.c \

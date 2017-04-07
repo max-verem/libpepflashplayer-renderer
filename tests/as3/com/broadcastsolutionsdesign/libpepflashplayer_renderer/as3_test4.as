@@ -36,7 +36,11 @@ package com.broadcastsolutionsdesign.libpepflashplayer_renderer
         private var notify_timer:Timer;
         private var cnt:int = 0;
 
-        private function js_toggle_play():void { log("js_toggle_play"); };
+        private function js_toggle_play(arg1:Object, arg2:Array):void
+        {
+            log("js_toggle_play: arg1=" + arg1);
+            log("js_toggle_play: arg2=" + arg2); // + ", arg2.length=" + arg2.length);
+        };
 
         public function as3_test4()
         {

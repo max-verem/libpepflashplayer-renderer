@@ -449,7 +449,6 @@ static PP_Resource Create(PP_Instance instance, PP_Resource share_context, const
     pthread_mutex_init(&graphics_3d->vsync.lock, NULL);
     pthread_create(&graphics_3d->vsync.th, NULL, vsync_thread, graphics_3d);
 
-
     return res;
 };
 
@@ -642,7 +641,7 @@ static int32_t SwapBuffers(PP_Resource context, struct PP_CompletionCallback cal
     LOG_N("glBindBuffer(%d) done, i_r=%d, PBO_RING_LEN=%d", graphics_3d->pbo[i_r], i_r, PBO_RING_LEN);
     glPixelStorei(GL_PACK_ALIGNMENT, 1);
     LOG_N("glReadPixels(pbo=%d)...", graphics_3d->pbo[i_r]);
-    glReadPixels(0, 0, inst->width, inst->height, GL_BGRA, GL_UNSIGNED_BYTE, 0);
+    glReadPixels(0, 0, inst->width, inst->height, GL_BGRA_EXT, GL_UNSIGNED_BYTE, 0);
     LOG_N("glReadPixels done");
     glBindBuffer(GL_PIXEL_PACK_BUFFER, 0);
     LOG_N("glBindBuffer(0) done");

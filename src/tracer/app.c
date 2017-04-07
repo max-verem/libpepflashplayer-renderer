@@ -7,6 +7,7 @@
 
 
 #include "app.h"
+#include "app_class.h"
 #include "ticker.h"
 #include "log.h"
 
@@ -182,6 +183,7 @@ int app_create(app_t** p_app, instance_t* inst)
     inst->buffer_swap_begin = app_buffer_swap_begin;
     inst->buffer_swap_end = app_buffer_swap_end;
     inst->app_data = app;
+    inst->app_class = &app_class_struct;
 
     pthread_mutex_init(&app->lock, NULL);
 

@@ -16,12 +16,13 @@
 
 #include "PPB_MessageLoop.h"
 #include "PPB_Var.h"
+#include "PPB.h"
 
 #define SWF_ARGS "line1=foo_url1&line2=bar_url2&line3=foo_url3&line4=bar_url4&param1=DEMO1%20LONG%20String"
 #define SWF_PATH "file:///usr/local/src/libpepflashplayer-renderer.git/tests/src"
 
 //#define SWF_NAME "m1-lowerThird-1080i50.swf"
-//#define SWF_NAME "as3_test4.swf"
+#define SWF_NAME "as3_test4.swf"
 
 //#define SWF_NAME "1080i50-blank_test_GPU.swf"
 //#define SWF_NAME "m1_logo_1080i50_BIG.swf"
@@ -30,7 +31,8 @@
 //#define SWF_NAME "demo1_2_movie.swf"
 //#define SWF_NAME "demo1_2_image.swf"
 //#define SWF_NAME "demo2.swf"
-#define SWF_NAME "transparent_CG_100_percents_coverage_v2_01.swf"
+//#define SWF_NAME "transparent_CG_100_percents_coverage_v2_01.swf"
+//#define SWF_NAME "transparent_CG_100_bars.swf"
 
 //const char* so_name = "/usr/local/src/libpepflashplayer-renderer.git/tests/libpepflashplayer.so-24.0.0.186-debug";
 const char* so_name = "/usr/local/src/libpepflashplayer-renderer.git/tests/libpepflashplayer.so-25.0.0.143-debug";
@@ -55,7 +57,7 @@ static void sighandler(int sig)
     LOG_N("sig=%d", sig);
 
     if(mod && inst)
-        r = mod->interface.message_loop->PostQuit(inst->message_loop_id, 0);
+        r = PPB_MessageLoop_1_0_instance.PostQuit(inst->message_loop_id, 0);
 
     LOG_N("r=%d", r);
 };
@@ -94,13 +96,15 @@ LOG_N("instance_id=%d", instance_id);
     r = mod_load(&mod, so_name);
     if(!r)
     {
+        inst->window_instance_object = PPB_Var_Deprecated_instance.CreateObject(inst->instance_id, inst->app_class, inst->app_data);
+
 LOG_N("mod->id=%d", mod->id);
 
-        inst->message_loop_id = mod->interface.message_loop->Create(inst->instance_id);
+        inst->message_loop_id = PPB_MessageLoop_1_0_instance.Create(inst->instance_id);
 
 LOG_N("inst->message_loop_id=%d", inst->message_loop_id);
 
-        r = mod->interface.message_loop->AttachToCurrentThread(inst->message_loop_id);
+        r = PPB_MessageLoop_1_0_instance.AttachToCurrentThread(inst->message_loop_id);
 
 LOG_N("msg_loop_interface->AttachToCurrentThread=%d", r);
 
@@ -131,20 +135,20 @@ LOG_N("mod->instance_interface->DidChangeView DONE");
         {
             struct PP_Var str;
 
-            int url_loader = mod->interface.url_loader->Create(inst->instance_id);
+            int url_loader = PPB_URLLoader_1_0_instance.Create(inst->instance_id);
 
-            int url_request_info = mod->interface.url_request_info->Create(inst->instance_id);
+            int url_request_info = PPB_URLRequestInfo_1_0_instance.Create(inst->instance_id);
 
             str = VarFromUtf8_c(inst->paths.PluginInstanceURL);
 
-            mod->interface.url_request_info->SetProperty(url_request_info, PP_URLREQUESTPROPERTY_URL, str);
+            PPB_URLRequestInfo_1_0_instance.SetProperty(url_request_info, PP_URLREQUESTPROPERTY_URL, str);
             PPB_Var_Release(str);
 
             str = VarFromUtf8_c("GET");
-            mod->interface.url_request_info->SetProperty(url_request_info, PP_URLREQUESTPROPERTY_METHOD, str);
+            PPB_URLRequestInfo_1_0_instance.SetProperty(url_request_info, PP_URLREQUESTPROPERTY_METHOD, str);
             PPB_Var_Release(str);
 
-            mod->interface.url_loader->Open(url_loader, url_request_info, PP_MakeCompletionCallback(f1, NULL));
+            PPB_URLLoader_1_0_instance.Open(url_loader, url_request_info, PP_MakeCompletionCallback(f1, NULL));
 
 LOG_N("mod->instance_interface->HandleDocumentLoad...");
             mod->interface.instance->HandleDocumentLoad(inst->instance_id, url_loader);
@@ -162,27 +166,46 @@ LOG_N("mod->instance_interface->DidChangeView...");
         mod->interface.instance->DidChangeView(inst->instance_id, inst->instance_id);
 LOG_N("mod->instance_interface->DidChangeView DONE");
 
+LOG_N("demo sleep1....");
+sleep(1);
+LOG_N("\n\n\n\n\n\n\n....sleeping done");
+
 LOG_N("will try to call dumb method");
         {
-            struct PP_Var str;
+            struct PP_Var result, ex, method;
+            struct PP_Var argv[2];
 
-            str = VarFromUtf8_c("toggle_play");
+            LOG_N("will create obj");
+            method = VarFromUtf8_c("toggle_play");
+            argv[0] = VarFromUtf8_c("fooo_arg");
+//            argv[1] = PPB_VarArrayBuffer_1_0_instance.Create(128);
+//            argv[1] = PPB_VarArray_1_0_instance.Create();
+//            argv[1] = PPB_Instance_Private_0_1_instance.GetWindowObject(inst->instance_id);
+//            arg = PPB_Var_Deprecated_instance.CreateObject(inst->instance_id, inst->app_class, inst->app_data);
+            LOG_N("done create obj");
 
-            mod->interface.var_depricated->Call(inst->private_instance_object, str, 0, NULL, NULL);
+            LOG_N("will call toggle_play");
+            result = PPB_Var_Deprecated_instance.Call(inst->private_instance_object, method, 2, argv, &ex);
+            PPB_Var_Dump("toggle_play result", result);
+            PPB_Var_Dump("toggle_play ex", result);
 
-            PPB_Var_Release(str);
+            PPB_Var_Release(ex);
+            PPB_Var_Release(method);
+            PPB_Var_Release(argv[0]);
+            PPB_Var_Release(argv[1]);
+            PPB_Var_Release(result);
         };
 
 LOG_N("will run reader thread");
         app_run(app_data);
 
 
-LOG_N("demo sleep....");
+LOG_N("demo sleep2....");
 sleep(1);
 LOG_N("\n\n\n\n\n\n\n....sleeping done");
 
 LOG_N("Run main loop...");
-        r = mod->interface.message_loop->Run(inst->message_loop_id);
+        r = PPB_MessageLoop_1_0_instance.Run(inst->message_loop_id);
 LOG_N("Exiting...");
 
 
@@ -190,6 +213,7 @@ LOG_N("will STOP reader thread");
         app_stop(app_data);
 
         PPB_Var_Release(inst->private_instance_object);
+        PPB_Var_Release(inst->window_instance_object);
 LOG_PL;
         mod->interface.instance->DidDestroy(inst->instance_id);
 LOG_PL;

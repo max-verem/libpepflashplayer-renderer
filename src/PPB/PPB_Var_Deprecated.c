@@ -28,6 +28,8 @@ typedef struct ppb_var_deprecated_desc
 static void ppb_var_deprecated_destructor(ppb_var_deprecated_t* ctx)
 {
     LOG_D("{%d}", ctx->self);
+    if(ctx->object_class && ctx->object_data)
+        ctx->object_class->Deallocate(ctx->object_data);
 };
 
 /**
@@ -43,8 +45,17 @@ static void ppb_var_deprecated_destructor(ppb_var_deprecated_t* ctx)
 static bool HasProperty(struct PP_Var object, struct PP_Var name,
     struct PP_Var* exception)
 {
-    LOG_NP;
-    return 0;
+    ppb_var_deprecated_t* dst;
+
+    if(!PPB_Var_Deprecated_instance.IsInstanceOf(object, NULL, NULL))
+    {
+        LOG_E("HERE");
+        return 0;
+    };
+
+    dst = (ppb_var_deprecated_t*)res_private(object.value.as_id);
+
+    return dst->object_class->HasProperty(dst->object_data, name, exception);
 };
 
 
@@ -55,8 +66,17 @@ static bool HasProperty(struct PP_Var object, struct PP_Var name,
 static bool HasMethod(struct PP_Var object, struct PP_Var name,
     struct PP_Var* exception)
 {
-    LOG_NP;
-    return 0;
+    ppb_var_deprecated_t* dst;
+
+    if(!PPB_Var_Deprecated_instance.IsInstanceOf(object, NULL, NULL))
+    {
+        LOG_E("HERE");
+        return 0;
+    };
+
+    dst = (ppb_var_deprecated_t*)res_private(object.value.as_id);
+
+    return dst->object_class->HasMethod(dst->object_data, name, exception);
 };
 
 /**
@@ -66,14 +86,19 @@ static bool HasMethod(struct PP_Var object, struct PP_Var name,
 static struct PP_Var GetProperty(struct PP_Var object,  struct PP_Var name,
     struct PP_Var* exception)
 {
-    const char* q;
-    uint32_t len;
+    ppb_var_deprecated_t* dst;
 
-    LOG_NP;
-    q = VarToUtf8(name, &len);
-    LOG_E("name=[%s]", q);
+//    PPB_Var_Dump("GetProperty(object", object);
 
-    return PP_MakeUndefined();
+    if(!PPB_Var_Deprecated_instance.IsInstanceOf(object, NULL, NULL))
+    {
+        LOG_E("object.type=%d, PP_VARTYPE_OBJECT=%d", object.type, PP_VARTYPE_OBJECT);
+        return PP_MakeUndefined();
+    };
+
+    dst = (ppb_var_deprecated_t*)res_private(object.value.as_id);
+
+    return dst->object_class->GetProperty(dst->object_data, name, exception);
 };
 
 /**
@@ -108,7 +133,17 @@ static void GetAllPropertyNames(struct PP_Var object,
     uint32_t* property_count, struct PP_Var** properties,
     struct PP_Var* exception)
 {
-    LOG_NP;
+    ppb_var_deprecated_t* dst;
+
+    if(!PPB_Var_Deprecated_instance.IsInstanceOf(object, NULL, NULL))
+    {
+        LOG_E("HERE");
+        return;
+    };
+
+    dst = (ppb_var_deprecated_t*)res_private(object.value.as_id);
+
+    dst->object_class->GetAllPropertyNames(dst->object_data, property_count, properties, exception);
 };
 
 /**
@@ -118,7 +153,17 @@ static void GetAllPropertyNames(struct PP_Var object,
 static void SetProperty(struct PP_Var object, struct PP_Var name, struct PP_Var value,
     struct PP_Var* exception)
 {
-    LOG_NP;
+    ppb_var_deprecated_t* dst;
+
+    if(!PPB_Var_Deprecated_instance.IsInstanceOf(object, NULL, NULL))
+    {
+        LOG_E("HERE");
+        return;
+    };
+
+    dst = (ppb_var_deprecated_t*)res_private(object.value.as_id);
+
+    dst->object_class->SetProperty(dst->object_data, name, value, exception);
 };
 
 /**
@@ -129,7 +174,17 @@ static void SetProperty(struct PP_Var object, struct PP_Var name, struct PP_Var 
 static void RemoveProperty(struct PP_Var object, struct PP_Var name,
     struct PP_Var* exception)
 {
-    LOG_NP;
+    ppb_var_deprecated_t* dst;
+
+    if(!PPB_Var_Deprecated_instance.IsInstanceOf(object, NULL, NULL))
+    {
+        LOG_E("HERE");
+        return;
+    };
+
+    dst = (ppb_var_deprecated_t*)res_private(object.value.as_id);
+
+    dst->object_class->RemoveProperty(dst->object_data, name, exception);
 };
 
 
@@ -158,11 +213,11 @@ static struct PP_Var Call(struct PP_Var var,
 {
     ppb_var_deprecated_t* dst;
 
-    if(var.type != PP_VARTYPE_OBJECT)
+    if(!PPB_Var_Deprecated_instance.IsInstanceOf(var, NULL, NULL))
+    {
+        LOG_E("HERE");
         return PP_MakeUndefined();
-
-    if(res_interface(var.value.as_id) != &PPB_Var_Deprecated_instance)
-        return PP_MakeUndefined();
+    };
 
     dst = (ppb_var_deprecated_t*)res_private(var.value.as_id);
 
@@ -195,7 +250,8 @@ static bool IsInstanceOf(struct PP_Var var,
 {
     ppb_var_deprecated_t* dst;
 
-    LOG_E("object_class=%p", object_class);
+    if(object_class)
+        LOG_N("object_class=%p", object_class);
 
     if(var.type != PP_VARTYPE_OBJECT)
         return 0;
@@ -204,10 +260,11 @@ static bool IsInstanceOf(struct PP_Var var,
         return 0;
 
     dst = (ppb_var_deprecated_t*)res_private(var.value.as_id);
-    if(dst->object_class != object_class)
+    if(object_class && object_class != dst->object_class)
         return 0;
 
-    *object_data = dst->object_data;
+    if(object_data)
+        *object_data = dst->object_data;
 
     return 1;
 };

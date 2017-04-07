@@ -20,12 +20,13 @@ typedef struct instance_desc
     PP_Resource message_loop_id;
     PP_Instance instance_id;
     struct PP_Var private_instance_object;
+    struct PP_Var window_instance_object;
     int is_full_frame, is_full_screen;
     PP_Resource graphics_id;
     struct PP_Var object;
-    const struct PPP_Class_Deprecated* object_class;
     int (*buffer_swap_begin)(void *app_data, void**, size_t* sz);
     int (*buffer_swap_end)(void *app_data, void**);
+    const struct PPP_Class_Deprecated* app_class;
     void* app_data;
 } instance_t;
 

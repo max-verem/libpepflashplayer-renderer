@@ -15,7 +15,9 @@ __global__ void cu_interlace_frames(uint32_t* src_0, uint32_t* src_1, uint32_t* 
     int s = i + j * width;
     int d = i + (height - 1 - j) * width;
 
-    dst[d] = (j & 1) ? src_1[s] : src_0[s];
+    uint32_t src = (j & 1) ? src_1[s] : src_0[s];
+
+    dst[d] = src;
 };
 
 extern "C" int cuda_interlace_frames(unsigned char* src_0, unsigned char* src_1, unsigned char* dst, int stride, int height, cudaStream_t cu_stream)

@@ -26,10 +26,6 @@ typedef struct mod_desc
     {
         const struct PPP_Instance_1_1* instance;
         const struct PPP_Instance_Private_0_1* instance_private;
-        const struct PPB_MessageLoop_1_0* message_loop;
-        const struct PPB_URLLoader_1_0* url_loader;
-        const struct PPB_URLRequestInfo_1_0* url_request_info;
-        const struct PPB_Var_Deprecated* var_depricated;
     } interface;
 } mod_t;
 

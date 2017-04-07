@@ -7,11 +7,16 @@
 #include <ppapi/c/pp_time.h>
 #include <ppapi/c/pp_completion_callback.h>
 
+#include <ppapi/c/dev/ppb_var_deprecated.h>
 #include <ppapi/c/private/ppb_instance_private.h>
 
 #include "log.h"
+#include "res.h"
+#include "instance.h"
 
 #include "PPB_Var.h"
+
+extern struct PPB_Var_Deprecated PPB_Var_Deprecated_instance;
 
 /**
  * GetWindowObject is a pointer to a function that determines
@@ -22,8 +27,12 @@
  */
 static struct PP_Var GetWindowObject(PP_Instance instance)
 {
-    LOG_TD;
-    return VarFromResource(instance);
+    instance_t* inst = (instance_t*)res_private(instance);
+    LOG_N("HERE");
+
+    PPB_Var_AddRef(inst->window_instance_object);
+
+    return inst->window_instance_object;
 };
 
 /**
@@ -61,9 +70,9 @@ static struct PP_Var ExecuteScript(PP_Instance instance, struct PP_Var script, s
 {
     LOG_NP;
 
-    LOG_E("var.type=%d", script.type);
+    LOG_E("script.type=%d", script.type);
     if(script.type == PP_VARTYPE_STRING)
-        LOG_E("var=[%s]", VarToUtf8(script, NULL));
+        LOG_E("script=[%s]", VarToUtf8(script, NULL));
 
     return PP_MakeInt32(0);
 };

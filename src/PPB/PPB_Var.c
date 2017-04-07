@@ -214,4 +214,115 @@ struct PPB_Var_1_2 PPB_Var_1_2_instance =
     .VarFromResource = VarFromResource,
 };
 
+static const char* var_types[] =
+{
+    "PP_VARTYPE_UNDEFINED",
+    "PP_VARTYPE_NULL",
+    "PP_VARTYPE_BOOL",
+    "PP_VARTYPE_INT32",
+    "PP_VARTYPE_DOUBLE",
+    "PP_VARTYPE_STRING",
+    "PP_VARTYPE_OBJECT",
+    "PP_VARTYPE_ARRAY",
+    "PP_VARTYPE_DICTIONARY",
+    "PP_VARTYPE_ARRAY_BUFFER",
+    "PP_VARTYPE_RESOURCE",
+};
 
+void PPB_Var_Dump(const char* name, struct PP_Var var)
+{
+    uint32_t len;
+    LOG_N("%s.type=%s", name, var_types[var.type]);
+
+    switch(var.type)
+    {
+        /**
+         * A boolean value, use the <code>as_bool</code> member of the var.
+         */
+        case PP_VARTYPE_BOOL:
+            LOG_N("%s.value.as_bool=%d", name, (int)var.value.as_bool);
+            break;
+
+        /**
+         * A 32-bit integer value. Use the <code>as_int</code> member of the var.
+         */
+        case PP_VARTYPE_INT32:
+            LOG_N("%s.value.as_int=%d", name, (int)var.value.as_int);
+            break;
+
+        /**
+         * A double-precision floating point value. Use the <code>as_double</code>
+         * member of the var.
+         */
+        case PP_VARTYPE_DOUBLE:
+            LOG_N("%s.value.as_double=%lf", name, var.value.as_double);
+            break;
+
+        /**
+         * The Var represents a string. The <code>as_id</code> field is used to
+         * identify the string, which may be created and retrieved from the
+         * <code>PPB_Var</code> interface. These objects are reference counted, so
+         * AddRef() and Release() must be used properly to avoid memory leaks.
+         */
+        case PP_VARTYPE_STRING:
+            LOG_N("%s=%s", name, VarToUtf8(var, &len));
+            break;
+
+         /**
+          * Represents a JavaScript object. This vartype is not currently usable
+          * from modules, although it is used internally for some tasks. These objects
+          * are reference counted, so AddRef() and Release() must be used properly to
+          * avoid memory leaks.
+          */
+        case PP_VARTYPE_OBJECT:
+
+        /**
+         * Represents an array of Vars. The <code>as_id</code> field is used to
+         * identify the array, which may be created and manipulated from the
+         * <code>PPB_VarArray</code> interface. These objects are reference counted,
+         * so AddRef() and Release() must be used properly to avoid memory leaks.
+         */
+        case PP_VARTYPE_ARRAY:
+
+        /**
+         * Represents a mapping from strings to Vars. The <code>as_id</code> field is
+         * used to identify the dictionary, which may be created and manipulated from
+         * the <code>PPB_VarDictionary</code> interface. These objects are reference
+         * counted, so AddRef() and Release() must be used properly to avoid memory
+         * leaks.
+         */
+        case PP_VARTYPE_DICTIONARY:
+
+        /**
+         * ArrayBuffer represents a JavaScript ArrayBuffer. This is the type which
+         * represents Typed Arrays in JavaScript. Unlike JavaScript 'Array', it is
+         * only meant to contain basic numeric types, and is always stored
+         * contiguously. See PPB_VarArrayBuffer_Dev for functions special to
+         * ArrayBuffer vars. These objects are reference counted, so AddRef() and
+         * Release() must be used properly to avoid memory leaks.
+         */
+        case PP_VARTYPE_ARRAY_BUFFER:
+
+        /**
+         * This type allows the <code>PP_Var</code> to wrap a <code>PP_Resource
+         * </code>. This can be useful for sending or receiving some types of
+         * <code>PP_Resource</code> using <code>PPB_Messaging</code> or
+         * <code>PPP_Messaging</code>.
+         *
+         * These objects are reference counted, so AddRef() and Release() must be used
+         * properly to avoid memory leaks. Under normal circumstances, the
+         * <code>PP_Var</code> will implicitly hold a reference count on the
+         * <code>PP_Resource</code> on your behalf. For example, if you call
+         * VarFromResource(), it implicitly calls PPB_Core::AddRefResource() on the
+         * <code>PP_Resource</code>. Likewise, PPB_Var::Release() on a Resource
+         * <code>PP_Var</code> will invoke PPB_Core::ReleaseResource() when the Var
+         * reference count goes to zero.
+         */
+        case PP_VARTYPE_RESOURCE:
+            break;
+
+        default:
+            LOG_N("%s.type=%d (UNHANDLED)", name, var.type);
+            break;
+    };
+};
