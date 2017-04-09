@@ -1,6 +1,7 @@
 noinst_LIBRARIES = libPPB.a
 
 libPPB_a_SOURCES = \
+    PPB_NetAddress.c \
     PPB_VarDictionary.c \
     PPB_VarArrayBuffer.c \
     PPB_VarArray.c \

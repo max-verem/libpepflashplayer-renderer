@@ -240,6 +240,10 @@ const static if_t ifs[] =
         .ptr = &PPB_VarDictionary_1_0_instance,
     },
     {
+        .name = PPB_NETADDRESS_INTERFACE_1_0,
+        .ptr = &PPB_NetAddress_1_0_instance,
+    },
+    {
         .name = NULL,
         .ptr = NULL,
     }

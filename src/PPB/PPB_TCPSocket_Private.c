@@ -106,9 +106,9 @@ typedef struct ConnectArgsDesc
 {
     uint64_t async;
     ppb_tcpsocket_private_t* ctx;
+    struct PP_CompletionCallback callback;
     char* host;
     uint16_t port;
-    struct PP_CompletionCallback callback;
 } ConnectArgs_t;
 
 static void* ConnectProcAsync(void* a)
@@ -122,7 +122,7 @@ static void* ConnectProcAsync(void* a)
     r = gethostbyname_r(args->host, &hostbuf, tmp, sizeof(tmp), &host_ip, &hp_errno);
     if(!host_ip)
     {
-        LOG_E("gethostbyname(%s) failed", args->host);
+        LOG_E("res=%d, gethostbyname(%s) failed", args->ctx->self, args->host);
 
         /* send callback */
         pthread_mutex_lock(&args->ctx->lock);
@@ -134,13 +134,17 @@ static void* ConnectProcAsync(void* a)
     {
         int s;
 
+        pthread_mutex_lock(&args->ctx->lock);
+//        args->ctx->hoste = hostbuf;
+        pthread_mutex_unlock(&args->ctx->lock);
+
         /* create communication socket */
         s = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
         if(s < 0)
         {
             s = errno;
 
-            LOG_E("socket() failed, errno=%d", s);
+            LOG_E("res=%d, socket() failed, errno=%d", args->ctx->self, s);
 
             /* send callback */
             pthread_mutex_lock(&args->ctx->lock);
@@ -150,7 +154,6 @@ static void* ConnectProcAsync(void* a)
         }
         else
         {
-            struct sockaddr_in s_local;
             struct sockaddr_in s_remote;
 
             /* prepare address */
@@ -164,7 +167,7 @@ static void* ConnectProcAsync(void* a)
             {
                 r = errno;
 
-                LOG_E("connect(%s:%d) failed, errno=%d (%s)", args->host, args->port, r, strerror(r));
+                LOG_E("res=%d, connect(%s:%d) failed, errno=%d (%s)", args->ctx->self, args->host, args->port, r, strerror(r));
 
                 /* send callback */
                 pthread_mutex_lock(&args->ctx->lock);
@@ -184,13 +187,13 @@ static void* ConnectProcAsync(void* a)
                 /* setup SO_KEEPALIVE for socket */
                 f = 1; r = setsockopt(s, SOL_SOCKET, SO_KEEPALIVE, (char*)&f, sizeof(f));
 
-                LOG_N("socket(%s:%d)=%d", args->host, args->port, s);
+                LOG_N("res=%d, socket(%s:%d)=%d", args->ctx->self, args->host, args->port, s);
 
                 /* send callback */
                 pthread_mutex_lock(&args->ctx->lock);
                 args->ctx->s = s;
                 args->ctx->asyncs--;
-                PPB_MessageLoop_push(0, args->callback, 0, errno2pp(r));
+                PPB_MessageLoop_push(0, args->callback, 0, PP_OK);
                 pthread_mutex_unlock(&args->ctx->lock);
             };
         };
@@ -208,18 +211,21 @@ static int32_t Connect(PP_Resource tcp_socket,
 {
     pthread_t th;
     ConnectArgs_t* args;
+    ppb_tcpsocket_private_t* ctx = (ppb_tcpsocket_private_t*)res_private(tcp_socket);
 
+    PPB_TCPSocket_Private_0_5_instance.Disconnect(tcp_socket);
+
+    pthread_mutex_lock(&ctx->lock);
     args = (ConnectArgs_t*)calloc(1, sizeof(ConnectArgs_t));
     args->host = strdup(host);
     args->port = port;
     args->callback = callback;
-    args->ctx = (ppb_tcpsocket_private_t*)res_private(tcp_socket);
-    pthread_mutex_lock(&args->ctx->lock);
+    args->ctx = ctx;
     args->async = ++args->ctx->async;
-    args->ctx->asyncs++;
+    ctx->asyncs++;
     pthread_create(&th, NULL, ConnectProcAsync, args);
     pthread_detach(th);
-    pthread_mutex_unlock(&args->ctx->lock);
+    pthread_mutex_unlock(&ctx->lock);
 
     return PP_OK_COMPLETIONPENDING;
 };
@@ -239,20 +245,82 @@ static int32_t ConnectWithNetAddress(PP_Resource tcp_socket,
  * Gets the local address of the socket, if it has been connected.
  * Returns PP_TRUE on success.
  */
-static PP_Bool GetLocalAddress(PP_Resource tcp_socket, struct PP_NetAddress_Private* local_addr)
+static PP_Bool GetLocalAddress(PP_Resource tcp_socket, struct PP_NetAddress_Private* addr)
 {
-    LOG_NP;
-    return 0;
+    int r;
+    ppb_tcpsocket_private_t* ctx = (ppb_tcpsocket_private_t*)res_private(tcp_socket);
+
+    pthread_mutex_lock(&ctx->lock);
+
+    if(ctx->s)
+    {
+        struct sockaddr_in s;
+        socklen_t len = sizeof(s);
+
+        r = getsockname(ctx->s, (struct sockaddr *)&s, &len);
+        if(r < 0)
+        {
+            r = errno;
+            LOG_E("res=%d, getsockname(%d)=%d (%s)", tcp_socket, ctx->s, r, strerror(r));
+            r = PP_FALSE;
+        }
+        else
+        {
+            LOG_N("local %s:%d\n", inet_ntoa(s.sin_addr), ntohs(s.sin_port));
+
+            /* copy */
+            addr->size = sizeof(s);
+            memcpy(addr->data, &s, addr->size);
+            r = PP_TRUE;
+        }
+    }
+    else
+        r = PP_FALSE;
+
+    pthread_mutex_unlock(&ctx->lock);
+
+    return r;
 };
 
 /**
  * Gets the remote address of the socket, if it has been connected.
  * Returns PP_TRUE on success.
  */
-static PP_Bool GetRemoteAddress(PP_Resource tcp_socket, struct PP_NetAddress_Private* remote_addr)
+static PP_Bool GetRemoteAddress(PP_Resource tcp_socket, struct PP_NetAddress_Private* addr)
 {
-    LOG_NP;
-    return 0;
+    int r;
+    ppb_tcpsocket_private_t* ctx = (ppb_tcpsocket_private_t*)res_private(tcp_socket);
+
+    pthread_mutex_lock(&ctx->lock);
+
+    if(ctx->s)
+    {
+        struct sockaddr_in s;
+        socklen_t len = sizeof(s);
+
+        r = getpeername(ctx->s, (struct sockaddr *)&s, &len);
+        if(r < 0)
+        {
+            r = errno;
+            LOG_E("res=%d, getsockname(%d)=%d (%s)", tcp_socket, ctx->s, r, strerror(r));
+            r = PP_FALSE;
+        }
+        else
+        {
+            LOG_N("remote %s:%d\n", inet_ntoa(s.sin_addr), ntohs(s.sin_port));
+
+            /* copy */
+            addr->size = sizeof(s);
+            memcpy(addr->data, &s, addr->size);
+            r = PP_TRUE;
+        }
+    }
+    else
+        r = PP_FALSE;
+
+    pthread_mutex_unlock(&ctx->lock);
+
+    return r;
 };
 
 /**
@@ -312,12 +380,86 @@ static PP_Bool AddChainBuildingCertificate(PP_Resource tcp_socket,
  * exceeds 1 megabyte, it will always perform a partial read.
  * Multiple outstanding read requests are not supported.
  */
+typedef struct ReadArgsDesc
+{
+    uint64_t async;
+    ppb_tcpsocket_private_t* ctx;
+    char* buffer;
+    int32_t bytes_to_read;
+    struct PP_CompletionCallback callback;
+} ReadArgs_t;
+
+static void* ReadProcAsync(void* a)
+{
+    int s;
+    ReadArgs_t* args = (ReadArgs_t*)a;
+
+    pthread_mutex_lock(&args->ctx->lock);
+    s = args->ctx->s;
+    pthread_mutex_unlock(&args->ctx->lock);
+
+    if(s <= 0)
+    {
+        /* send callback */
+        pthread_mutex_lock(&args->ctx->lock);
+        args->ctx->asyncs--;
+        PPB_MessageLoop_push(0, args->callback, 0, PP_ERROR_CONNECTION_CLOSED);
+        pthread_mutex_unlock(&args->ctx->lock);
+    }
+    else
+    {
+        int r;
+
+        r = read(s, args->buffer, args->bytes_to_read);
+
+        if(r < 0)
+        {
+            r = errno;
+
+            LOG_E("res=%d, socket() failed, errno=%d", args->ctx->self, r);
+
+            /* send callback */
+            pthread_mutex_lock(&args->ctx->lock);
+            args->ctx->asyncs--;
+            PPB_MessageLoop_push(0, args->callback, 0, errno2pp(r));
+            pthread_mutex_unlock(&args->ctx->lock);
+        }
+        else
+        {
+            /* send callback */
+            pthread_mutex_lock(&args->ctx->lock);
+            args->ctx->asyncs--;
+            PPB_MessageLoop_push(0, args->callback, 0, r);
+            pthread_mutex_unlock(&args->ctx->lock);
+        };
+    };
+
+    free(args);
+
+    return NULL;
+};
+
 static int32_t Read(PP_Resource tcp_socket,
     char* buffer, int32_t bytes_to_read,
     struct PP_CompletionCallback callback)
 {
-    LOG_NP;
-    return 0;
+    pthread_t th;
+    ReadArgs_t* args;
+    ppb_tcpsocket_private_t* ctx = (ppb_tcpsocket_private_t*)res_private(tcp_socket);
+
+    pthread_mutex_lock(&ctx->lock);
+    args = (ReadArgs_t*)calloc(1, sizeof(ReadArgs_t));
+    args->buffer = buffer;
+    args->bytes_to_read = bytes_to_read;
+    args->callback = callback;
+    args->ctx = ctx;
+    args->async = ++args->ctx->async;
+    ctx->asyncs++;
+    pthread_create(&th, NULL, ReadProcAsync, args);
+    pthread_detach(th);
+    pthread_mutex_unlock(&ctx->lock);
+
+    return PP_OK_COMPLETIONPENDING;
 };
 
 /**
@@ -327,12 +469,86 @@ static int32_t Read(PP_Resource tcp_socket,
  * exceeds 1 megabyte, it will always perform a partial write.
  * Multiple outstanding write requests are not supported.
  */
+typedef struct WriteArgsDesc
+{
+    uint64_t async;
+    ppb_tcpsocket_private_t* ctx;
+    const char* buffer;
+    int32_t bytes_to_write;
+    struct PP_CompletionCallback callback;
+} WriteArgs_t;
+
+static void* WriteProcAsync(void* a)
+{
+    int s;
+    WriteArgs_t* args = (WriteArgs_t*)a;
+
+    pthread_mutex_lock(&args->ctx->lock);
+    s = args->ctx->s;
+    pthread_mutex_unlock(&args->ctx->lock);
+
+    if(s <= 0)
+    {
+        /* send callback */
+        pthread_mutex_lock(&args->ctx->lock);
+        args->ctx->asyncs--;
+        PPB_MessageLoop_push(0, args->callback, 0, PP_ERROR_CONNECTION_CLOSED);
+        pthread_mutex_unlock(&args->ctx->lock);
+    }
+    else
+    {
+        int r;
+
+        r = write(s, args->buffer, args->bytes_to_write);
+
+        if(r < 0)
+        {
+            r = errno;
+
+            LOG_E("res=%d, socket() failed, errno=%d", args->ctx->self, r);
+
+            /* send callback */
+            pthread_mutex_lock(&args->ctx->lock);
+            args->ctx->asyncs--;
+            PPB_MessageLoop_push(0, args->callback, 0, errno2pp(r));
+            pthread_mutex_unlock(&args->ctx->lock);
+        }
+        else
+        {
+            /* send callback */
+            pthread_mutex_lock(&args->ctx->lock);
+            args->ctx->asyncs--;
+            PPB_MessageLoop_push(0, args->callback, 0, r);
+            pthread_mutex_unlock(&args->ctx->lock);
+        };
+    };
+
+    free(args);
+
+    return NULL;
+};
+
 static int32_t Write(PP_Resource tcp_socket,
     const char* buffer, int32_t bytes_to_write,
     struct PP_CompletionCallback callback)
 {
-    LOG_NP;
-    return 0;
+    pthread_t th;
+    WriteArgs_t* args;
+    ppb_tcpsocket_private_t* ctx = (ppb_tcpsocket_private_t*)res_private(tcp_socket);
+
+    pthread_mutex_lock(&ctx->lock);
+    args = (WriteArgs_t*)calloc(1, sizeof(ReadArgs_t));
+    args->buffer = buffer;
+    args->bytes_to_write = bytes_to_write;
+    args->callback = callback;
+    args->ctx = ctx;
+    args->async = ++args->ctx->async;
+    ctx->asyncs++;
+    pthread_create(&th, NULL, WriteProcAsync, args);
+    pthread_detach(th);
+    pthread_mutex_unlock(&ctx->lock);
+
+    return PP_OK_COMPLETIONPENDING;
 };
 
 /**
@@ -345,7 +561,17 @@ static int32_t Write(PP_Resource tcp_socket,
  */
 static void Disconnect(PP_Resource tcp_socket)
 {
-    LOG_NP;
+    ppb_tcpsocket_private_t* ctx = (ppb_tcpsocket_private_t*)res_private(tcp_socket);
+
+    pthread_mutex_lock(&ctx->lock);
+    LOG_N("res=%d, socket=%d", tcp_socket, ctx->s);
+    if(ctx->s)
+    {
+        shutdown(ctx->s, SHUT_RDWR);
+        close(ctx->s);
+    };
+    ctx->s = 0;
+    pthread_mutex_unlock(&ctx->lock);
 };
 
 /**

@@ -47,6 +47,7 @@
 #include <ppapi/c/ppb_var_array.h>
 #include <ppapi/c/ppb_var_array_buffer.h>
 #include <ppapi/c/ppb_var_dictionary.h>
+#include <ppapi/c/ppb_net_address.h>
 
 extern struct PPB_Core_1_0 PPB_Core_1_0_interface;
 extern struct PPB_AudioConfig_1_1 PPB_AudioConfig_1_1_instance;
@@ -105,3 +106,4 @@ extern struct PPB_Instance_Private_0_1 PPB_Instance_Private_0_1_instance;
 extern struct PPB_VarArray_1_0 PPB_VarArray_1_0_instance;
 extern struct PPB_VarArrayBuffer_1_0 PPB_VarArrayBuffer_1_0_instance;
 extern struct PPB_VarDictionary_1_0 PPB_VarDictionary_1_0_instance;
+extern struct PPB_NetAddress_1_0 PPB_NetAddress_1_0_instance;

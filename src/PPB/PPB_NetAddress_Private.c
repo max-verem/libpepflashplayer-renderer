@@ -9,27 +9,29 @@
 
 #include <ppapi/c/private/ppb_net_address_private.h>
 
+#include <errno.h>
+#include <netdb.h>
+#include <unistd.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <netinet/tcp.h>
+#include <arpa/inet.h>
+
+#include "PPB_Var.h"
+
 #include "log.h"
 
-
-#if 0
-/**
- * This is an opaque type holding a network address. Plugins must
- * never access members of this struct directly.
- */
-struct PP_NetAddress_Private {
-  uint32_t size;
-  char data[128];
-};
-#endif
+struct PPB_NetAddress_Private_1_1 PPB_NetAddress_Private_1_1_instance;
 
 /**
  * Returns PP_TRUE if the two addresses are equal (host and port).
  */
 static PP_Bool AreEqual(const struct PP_NetAddress_Private* addr1, const struct PP_NetAddress_Private* addr2)
 {
-    LOG_NP;
-    return 0;
+    struct sockaddr_in *a1 = (struct sockaddr_in *)addr1->data;
+    struct sockaddr_in *a2 = (struct sockaddr_in *)addr2->data;
+
+    return (a1->sin_port == a2->sin_port) && PPB_NetAddress_Private_1_1_instance.AreHostsEqual(addr1, addr2);
 };
 
 /**
@@ -37,8 +39,9 @@ static PP_Bool AreEqual(const struct PP_NetAddress_Private* addr1, const struct 
  */
 static PP_Bool AreHostsEqual(const struct PP_NetAddress_Private* addr1, const struct PP_NetAddress_Private* addr2)
 {
-    LOG_NP;
-    return 0;
+    struct sockaddr_in *a1 = (struct sockaddr_in *)addr1->data;
+    struct sockaddr_in *a2 = (struct sockaddr_in *)addr2->data;
+    return a1->sin_addr.s_addr == a2->sin_addr.s_addr;
 };
 
 /**
@@ -48,8 +51,15 @@ static PP_Bool AreHostsEqual(const struct PP_NetAddress_Private* addr1, const st
  */
 static struct PP_Var Describe(PP_Module module, const struct PP_NetAddress_Private* addr, PP_Bool include_port)
 {
-    LOG_NP;
-    return PP_MakeInt32(0);
+    char buf[32];
+    struct sockaddr_in *s = (struct sockaddr_in *)addr->data;
+
+    if(include_port)
+        snprintf(buf, sizeof(buf), "%s:%d", inet_ntoa(s->sin_addr), ntohs(s->sin_port));
+    else
+        snprintf(buf, sizeof(buf), "%s", inet_ntoa(s->sin_addr));
+
+    return VarFromUtf8_c(buf);
 };
 
 /**
@@ -58,8 +68,13 @@ static struct PP_Var Describe(PP_Module module, const struct PP_NetAddress_Priva
 static PP_Bool ReplacePort(const struct PP_NetAddress_Private* src_addr,
     uint16_t port, struct PP_NetAddress_Private* addr_out)
 {
-    LOG_NP;
-    return 0;
+    struct sockaddr_in * s = (struct sockaddr_in *)addr_out->data;
+
+    memcpy(addr_out, src_addr, sizeof(struct PP_NetAddress_Private));
+
+    s->sin_port = htons(port);
+
+    return PP_TRUE;
 };
 
 /**
@@ -75,8 +90,7 @@ static void GetAnyAddress(PP_Bool is_ipv6, struct PP_NetAddress_Private* addr)
  */
 static PP_NetAddressFamily_Private GetFamily(const struct PP_NetAddress_Private* addr)
 {
-    LOG_NP;
-    return 0;
+    return PP_NETADDRESSFAMILY_PRIVATE_IPV4;
 };
 
 /**
@@ -84,8 +98,8 @@ static PP_NetAddressFamily_Private GetFamily(const struct PP_NetAddress_Private*
  */
 static uint16_t GetPort(const struct PP_NetAddress_Private* addr)
 {
-    LOG_NP;
-    return 0;
+    struct sockaddr_in *s = (struct sockaddr_in *)addr->data;
+    return ntohs(s->sin_port);
 };
 
 /**
@@ -97,8 +111,11 @@ static uint16_t GetPort(const struct PP_NetAddress_Private* addr)
  */
 static PP_Bool GetAddress(const struct PP_NetAddress_Private* addr, void* address, uint16_t address_size)
 {
-    LOG_NP;
-    return 0;
+    struct sockaddr_in *s = (struct sockaddr_in *)addr->data;
+
+    memcpy(address, &s->sin_addr.s_addr, (address_size > sizeof(s->sin_addr.s_addr))?sizeof(s->sin_addr.s_addr):address_size);
+
+    return PP_TRUE;
 };
 
 /**
