@@ -27,7 +27,7 @@ static int app_buffer_swap_begin(app_t* app, void** pPtr, size_t* sz)
 {
     int idx;
 
-    LOG_N("app->inst=%p", app->inst);
+    LOG_T("app->inst=%p", app->inst);
 
     idx = app_buffer_ref(&app->buf_dev, -1);
 
@@ -37,7 +37,7 @@ static int app_buffer_swap_begin(app_t* app, void** pPtr, size_t* sz)
     *pPtr = (idx < 0)?NULL:app->buf_dev.buf[idx];
     *sz = app->buf_dev.size;
 
-    LOG_N("ptr=%p, idx=%d", *pPtr, idx);
+    LOG_T("ptr=%p, idx=%d", *pPtr, idx);
 
     return (idx < 0)?-ENOMEM:0;
 };
@@ -49,7 +49,7 @@ static int app_buffer_swap_end(app_t* app, void** pbuf)
     void* buf = *pbuf;
     int idx = app_buffer_idx(&app->buf_dev, buf);
 
-    LOG_N("buf=%p, idx=%d", buf, idx);
+    LOG_T("buf=%p, idx=%d", buf, idx);
 
     app_buffer_unref(&app->buf_dev, app->vga[1]);
     app->vga[1] = app->vga[0];
@@ -60,7 +60,7 @@ static int app_buffer_swap_end(app_t* app, void** pbuf)
 
     app->swaps++;
 
-    LOG_N("vga=[%d,%d]", app->vga[0], app->vga[1]);
+    LOG_T("vga=[%d,%d]", app->vga[0], app->vga[1]);
 
     if(app->swaps & 1)
     {
@@ -153,7 +153,7 @@ static int app_buffer_swap_end(app_t* app, void** pbuf)
 
         t2 = ticker_now();
 
-        LOG_N("OPS [%3d%3d%3d%3d%3d%3d%3d] %d ns",
+        LOG_T("OPS [%3d%3d%3d%3d%3d%3d%3d] %d ns",
             app->ops[0], app->ops[1], app->ops[2], app->ops[3],
             app->ops[4], app->ops[5], app->ops[6], (int)(t2 - t1));
     };
