@@ -35,7 +35,7 @@ static void* vsync_thread(void* p)
     {
         /* wait */
         ticker_wait(graphics_3d->vsync.ticker);
-        LOG_N("ticker_wait(%d)", r);
+        LOG_T("ticker_wait(%d)", r);
 
         /* check callback value */
         pthread_mutex_lock(&graphics_3d->vsync.lock);
@@ -54,7 +54,7 @@ static void* vsync_thread(void* p)
         {
             /* send callback */
             r = PPB_MessageLoop_push(0, *callback, 0, PP_OK);
-            LOG_N("PPB_MessageLoop_push'ed=%d", r);
+            LOG_T("PPB_MessageLoop_push'ed=%d", r);
             free(callback);
         };
 
@@ -63,7 +63,7 @@ static void* vsync_thread(void* p)
             inst->buffer_swap_end(inst->app_data, &ptr);
     };
 
-    LOG_D("finishing");
+    LOG_N("finishing");
 
     return NULL;
 };
@@ -638,13 +638,13 @@ static int32_t SwapBuffers(PP_Resource context, struct PP_CompletionCallback cal
 
     // copy current buffer
     glBindBuffer(GL_PIXEL_PACK_BUFFER, graphics_3d->pbo[i_r]);
-    LOG_N("glBindBuffer(%d) done, i_r=%d, PBO_RING_LEN=%d", graphics_3d->pbo[i_r], i_r, PBO_RING_LEN);
+    LOG_T("glBindBuffer(%d) done, i_r=%d, PBO_RING_LEN=%d", graphics_3d->pbo[i_r], i_r, PBO_RING_LEN);
     glPixelStorei(GL_PACK_ALIGNMENT, 1);
-    LOG_N("glReadPixels(pbo=%d)...", graphics_3d->pbo[i_r]);
+    LOG_T("glReadPixels(pbo=%d)...", graphics_3d->pbo[i_r]);
     glReadPixels(0, 0, inst->width, inst->height, GL_BGRA_EXT, GL_UNSIGNED_BYTE, 0);
-    LOG_N("glReadPixels done");
+    LOG_T("glReadPixels done");
     glBindBuffer(GL_PIXEL_PACK_BUFFER, 0);
-    LOG_N("glBindBuffer(0) done");
+    LOG_T("glBindBuffer(0) done");
 
     if(CUDA_SUCCESS != (e = cuCtxPushCurrent(graphics_3d->cu_ctx)))
         LOG_E("cuCtxCreate failed: %s", getCudaDrvErrorString(e));
@@ -675,7 +675,7 @@ static int32_t SwapBuffers(PP_Resource context, struct PP_CompletionCallback cal
                 if(CUDA_SUCCESS != e)
                     LOG_E("cudaMemcpy failed: %s", getCudaDrvErrorString(e));
                 else
-                    LOG_N("cudaMemcpy: %d ns", (int)(t2 - t1));
+                    LOG_T("cudaMemcpy: %d ns", (int)(t2 - t1));
             };
         };
     };
