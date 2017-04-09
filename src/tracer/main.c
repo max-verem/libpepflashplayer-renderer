@@ -22,7 +22,8 @@
 #define SWF_PATH "file:///usr/local/src/libpepflashplayer-renderer.git/tests/src"
 
 //#define SWF_NAME "m1-lowerThird-1080i50.swf"
-#define SWF_NAME "as3_test4.swf"
+//#define SWF_NAME "as3_test4.swf"
+#define SWF_NAME "CtlProxy.swf"
 
 //#define SWF_NAME "1080i50-blank_test_GPU.swf"
 //#define SWF_NAME "m1_logo_1080i50_BIG.swf"
@@ -173,11 +174,12 @@ LOG_N("\n\n\n\n\n\n\n....sleeping done");
 LOG_N("will try to call dumb method");
         {
             struct PP_Var result, ex, method;
-            struct PP_Var argv[2];
+            struct PP_Var argv[3];
 
             LOG_N("will create obj");
             method = VarFromUtf8_c("toggle_play");
             argv[0] = VarFromUtf8_c("fooo_arg");
+            argv[1] = PP_MakeInt32(12345);
 //            argv[1] = PPB_VarArrayBuffer_1_0_instance.Create(128);
 //            argv[1] = PPB_VarArray_1_0_instance.Create();
 //            argv[1] = PPB_Instance_Private_0_1_instance.GetWindowObject(inst->instance_id);
@@ -185,9 +187,10 @@ LOG_N("will try to call dumb method");
             LOG_N("done create obj");
 
             LOG_N("will call toggle_play");
-            result = PPB_Var_Deprecated_instance.Call(inst->private_instance_object, method, 2, argv, &ex);
+            result = PPB_Var_Deprecated_instance.Call(inst->private_instance_object, method, 3, argv, &ex);
             PPB_Var_Dump("toggle_play result", result);
             PPB_Var_Dump("toggle_play ex", result);
+            PPB_Var_Dump("toggle_play arg2", argv[2]);
 
             PPB_Var_Release(ex);
             PPB_Var_Release(method);

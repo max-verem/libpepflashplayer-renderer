@@ -14,18 +14,24 @@ package com.broadcastsolutionsdesign.libpepflashplayer_renderer
     import flash.net.URLRequestMethod;
     import flash.events.Event;
 
+    import flash.events.ProgressEvent;
+    import flash.events.ServerSocketConnectEvent;
+    import flash.net.ServerSocket;
+    import flash.net.Socket;
+
     import com.broadcastsolutionsdesign.libpepflashplayer_renderer.Utils;
     import com.broadcastsolutionsdesign.libpepflashplayer_renderer.URLLoader2;
 
     [SWF(frameRate=50)]
 
-    public class as3_test4 extends MovieClip
+    public class as3_test5 extends MovieClip
     {
         [Embed(source="../../../res/m1-hb.ttf",
             fontName = "myFont",
             mimeType = "application/x-font",
             advancedAntiAliasing="true",
             embedAsCFF="false")]
+
 
         private var myEmbeddedFont:Class;
 
@@ -69,7 +75,7 @@ package com.broadcastsolutionsdesign.libpepflashplayer_renderer
             return 654321; //"----js_toggle_play----";
         };
 
-        public function as3_test4()
+        public function as3_test5()
         {
             stage.align = StageAlign.TOP_LEFT;
             stage.scaleMode = StageScaleMode.NO_SCALE;
@@ -96,6 +102,68 @@ package com.broadcastsolutionsdesign.libpepflashplayer_renderer
             {
                 log(e.toString());
             };
+        }
+
+        private var serverSocket:ServerSocket = new ServerSocket();
+        private var clientSockets:Array = new Array();
+
+        private function onConnect(event:ServerSocketConnectEvent):void
+        {
+            var socket:Socket = event.socket as Socket;
+            clientSockets.push(socket);
+
+            socket.addEventListener(ProgressEvent.SOCKET_DATA, onClientSocketData);
+
+            socket.addEventListener(ProgressEvent.SOCKET_DATA, onClientSocketData);
+            socket.addEventListener(Event.CLOSE, onClientSocketClose);
+            socket.addEventListener(IOErrorEvent.IO_ERROR, onClientSocketError);
+
+            log("onConnect: Connection from ");// + socket.remoteAddress + ":" + socket.remotePort);
+        }
+
+        private function onClientSocketClose(event:Event):void
+        {
+            log( "Connection to client closed." );
+            //Should also remove from clientSockets array...
+        }
+
+        private function onClientSocketError(errorEvent:IOErrorEvent):void
+        {
+            log( "IOError: " + errorEvent.text );
+        }
+
+        private function onClientSocketData( event:ProgressEvent ):void
+        {
+            var socket:Socket = event.target as Socket;
+
+            //Read the message from the socket
+            var message:String = socket.readUTFBytes(socket.bytesAvailable);
+            log("Received: " + message);
+
+            // Echo the received message back to the sender
+            message = "Echo -- " + message;
+            socket.writeUTFBytes(message);
+            socket.flush();
+            log("Sending: " + message);
+        }
+
+        private function onClose(event:Event):void
+        {
+            log( "Server socket closed by OS." );
+        }
+
+        private function bind(localPort:String, localIP:String):void
+        {
+            if( serverSocket.bound )
+            {
+                serverSocket.close();
+                serverSocket = new ServerSocket();
+            }
+            serverSocket.bind(parseInt(localPort), localIP);
+            serverSocket.addEventListener(ServerSocketConnectEvent.CONNECT, onConnect);
+            serverSocket.addEventListener(Event.CLOSE, onClose);
+            serverSocket.listen();
+            log( "Bound to: " + serverSocket.localAddress + ":" + serverSocket.localPort );
         }
 
         private function onStageResize(event: Event = null): void
@@ -225,7 +293,7 @@ package com.broadcastsolutionsdesign.libpepflashplayer_renderer
             /* init request */
             var req:URLRequest = new URLRequest(app_url);
             req.method = URLRequestMethod.POST;
-            req.data = JSON.stringify(json);
+///            req.data = JSON.stringify(json);
             req.contentType = "text/x-json";
 
             /* init loader */
@@ -240,7 +308,7 @@ package com.broadcastsolutionsdesign.libpepflashplayer_renderer
 
                 try
                 {
-                    j = JSON.parse(e.target.data);
+///                    j = JSON.parse(e.target.data);
                     log("app_call: e.target.data=" + e.target.data);
                 }
                 catch(e:Error)
@@ -263,7 +331,7 @@ package com.broadcastsolutionsdesign.libpepflashplayer_renderer
                 log("app_call: IO ERROR:" + e.text);
             });
 
-            log("app_call: calling:" + JSON.stringify(json));
+///            log("app_call: calling:" + JSON.stringify(json));
             try
             {
                 ul.load(req);
