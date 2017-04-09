@@ -319,6 +319,11 @@ void PPB_Var_Dump(const char* name, struct PP_Var var)
          * reference count goes to zero.
          */
         case PP_VARTYPE_RESOURCE:
+
+
+        case PP_VARTYPE_UNDEFINED:
+        case PP_VARTYPE_NULL:
+
             break;
 
         default:
