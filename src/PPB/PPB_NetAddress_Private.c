@@ -113,6 +113,8 @@ static PP_Bool GetAddress(const struct PP_NetAddress_Private* addr, void* addres
 {
     struct sockaddr_in *s = (struct sockaddr_in *)addr->data;
 
+    LOG_N("address_size=%d, sizeof(s->sin_addr.s_addr)=%d", (int)address_size, (int)sizeof(s->sin_addr.s_addr));
+
     memcpy(address, &s->sin_addr.s_addr, (address_size > sizeof(s->sin_addr.s_addr))?sizeof(s->sin_addr.s_addr):address_size);
 
     return PP_TRUE;
