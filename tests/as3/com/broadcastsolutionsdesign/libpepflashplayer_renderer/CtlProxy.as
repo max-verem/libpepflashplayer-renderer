@@ -33,6 +33,16 @@ package com.broadcastsolutionsdesign.libpepflashplayer_renderer
         private var socket_buffer:String = "";
         private var socket:Socket = new Socket();
 
+        private function socket_connect(delay:int):void
+        {
+            var t:Timer = new Timer(delay, 1);
+            t.addEventListener(TimerEvent.TIMER, function(e:TimerEvent):void
+            {
+                socket.connect(connect_host, parseInt(connect_port));
+            });
+            t.start();
+        };
+
         public function CtlProxy()
         {
             log("CtlProxy: built on [" + buildDate + "] from git head [" + buildHead + "]");
@@ -52,7 +62,7 @@ package com.broadcastsolutionsdesign.libpepflashplayer_renderer
             socket.addEventListener(ProgressEvent.SOCKET_DATA, onSocketResponse);
             socket.addEventListener(SecurityErrorEvent.SECURITY_ERROR, onSocketSecError);
             socket.timeout = parseInt(connect_timeout);
-            socket.connect(connect_host, parseInt(connect_port));
+            socket_connect(0);
         }
 
         private function onSocketConnect(e:Event):void
@@ -62,28 +72,29 @@ package com.broadcastsolutionsdesign.libpepflashplayer_renderer
         private function onSocketClose(e:Event):void
         {
             log("onSocketClose: here");
+            socket_connect(1000);
         }
         private function onSocketError(e:IOErrorEvent):void
         {
             log("onSocketError: " + e);
-            socket.connect(connect_host, parseInt(connect_port));
+            socket_connect(1000);
         }
         private function onSocketSecError(e:SecurityErrorEvent):void
         {
-            log("onSocketError: " + e);
-            socket.connect(connect_host, parseInt(connect_port));
+            log("onSocketSecError: " + e);
+            socket_connect(1000);
         }
         private function onSocketResponse(e:ProgressEvent):void
         {
             var socket:Socket = e.target as Socket;
 
-            log("SocketResponse: enter");
+            log("onSocketSecError: enter");
 
             while(socket.bytesAvailable)
             {
                 var t:int;
 
-                log("SocketResponse: socket.bytesAvailable=" + socket.bytesAvailable);
+                log("onSocketResponse: socket.bytesAvailable=" + socket.bytesAvailable);
 
                 /* append buffer */
                 socket_buffer += (socket.readUTFBytes(socket.bytesAvailable)).toString();
@@ -101,7 +112,7 @@ package com.broadcastsolutionsdesign.libpepflashplayer_renderer
                     cmd = socket_buffer.substr(0, t);
                     socket_buffer = socket_buffer.substr(t + 1);
 
-                    log("SocketResponse: cmd=[" + cmd + "]");
+                    log("onSocketResponse: cmd=[" + cmd + "]");
 
                     socket.writeUTFBytes("{" + cmd + "}:");
                     socket.flush();
