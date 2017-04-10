@@ -59,7 +59,7 @@ typedef struct ppb_tcpsocket_private_desc
 
 static void ppb_tcpsocket_private_destructor(ppb_tcpsocket_private_t* ctx)
 {
-    LOG_D("{%d}", ctx->self);
+    LOG_D("{%d}, ctx=%p, async=%d, asyncs=%d", ctx->self, ctx, (int)ctx->async, (int)ctx->asyncs);
 
     /* destroy mutex */
     pthread_mutex_destroy(&ctx->lock);
@@ -71,20 +71,20 @@ static void ppb_tcpsocket_private_destructor(ppb_tcpsocket_private_t* ctx)
  */
 static PP_Resource Create(PP_Instance instance)
 {
-    ppb_tcpsocket_private_t* dst;
+    ppb_tcpsocket_private_t* ctx;
     int res = res_create(sizeof(ppb_tcpsocket_private_t), &PPB_TCPSocket_Private_0_5_instance, (res_destructor_t)ppb_tcpsocket_private_destructor);
 
-    LOG_D("res=%d", res);
-
     /* get private data */
-    dst = (ppb_tcpsocket_private_t*)res_private(res);
+    ctx = (ppb_tcpsocket_private_t*)res_private(res);
+
+    LOG_D("res=%d, ctx=%p", res, ctx);
 
     /* setup internals */
-    dst->instance_id = instance;
-    dst->self = res;
+    ctx->instance_id = instance;
+    ctx->self = res;
 
     /* create mutex mutex */
-    pthread_mutex_init(&dst->lock, NULL);
+    pthread_mutex_init(&ctx->lock, NULL);
 
     return res;
 };
@@ -102,24 +102,26 @@ static PP_Bool IsTCPSocket(PP_Resource resource)
  * When a proxy server is used, |host| and |port| refer to the proxy server
  * instead of the destination server.
  */
-typedef struct ConnectArgsDesc
+typedef struct ArgsDesc
 {
+    struct PP_CompletionCallback callback;
     uint64_t async;
     ppb_tcpsocket_private_t* ctx;
-    struct PP_CompletionCallback callback;
     char* host;
     uint16_t port;
-} ConnectArgs_t;
+    char* buffer;
+    int32_t bytes;
+    pthread_t th;
+} Args_t;
 
 static void* ConnectProcAsync(void* a)
 {
-    char tmp[8192];
-    int r, hp_errno;
-    struct hostent hostbuf, *host_ip;
-    ConnectArgs_t* args = (ConnectArgs_t*)a;
+    int r;
+    struct hostent *host_ip = NULL;
+    Args_t* args = (Args_t*)a;
 
     /* resolv hostname */
-    r = gethostbyname_r(args->host, &hostbuf, tmp, sizeof(tmp), &host_ip, &hp_errno);
+    host_ip = gethostbyname(args->host);
     if(!host_ip)
     {
         LOG_E("res=%d, gethostbyname(%s) failed", args->ctx->self, args->host);
@@ -209,22 +211,21 @@ static int32_t Connect(PP_Resource tcp_socket,
     const char* host, uint16_t port,
     struct PP_CompletionCallback callback)
 {
-    pthread_t th;
-    ConnectArgs_t* args;
+    Args_t* args;
     ppb_tcpsocket_private_t* ctx = (ppb_tcpsocket_private_t*)res_private(tcp_socket);
 
     PPB_TCPSocket_Private_0_5_instance.Disconnect(tcp_socket);
 
     pthread_mutex_lock(&ctx->lock);
-    args = (ConnectArgs_t*)calloc(1, sizeof(ConnectArgs_t));
+    args = (Args_t*)calloc(1, sizeof(Args_t));
     args->host = strdup(host);
     args->port = port;
     args->callback = callback;
     args->ctx = ctx;
     args->async = ++args->ctx->async;
     ctx->asyncs++;
-    pthread_create(&th, NULL, ConnectProcAsync, args);
-    pthread_detach(th);
+    pthread_create(&args->th, NULL, ConnectProcAsync, args);
+    pthread_detach(args->th);
     pthread_mutex_unlock(&ctx->lock);
 
     return PP_OK_COMPLETIONPENDING;
@@ -380,19 +381,10 @@ static PP_Bool AddChainBuildingCertificate(PP_Resource tcp_socket,
  * exceeds 1 megabyte, it will always perform a partial read.
  * Multiple outstanding read requests are not supported.
  */
-typedef struct ReadArgsDesc
-{
-    uint64_t async;
-    ppb_tcpsocket_private_t* ctx;
-    char* buffer;
-    int32_t bytes_to_read;
-    struct PP_CompletionCallback callback;
-} ReadArgs_t;
-
 static void* ReadProcAsync(void* a)
 {
     int s;
-    ReadArgs_t* args = (ReadArgs_t*)a;
+    Args_t* args = (Args_t*)a;
 
     pthread_mutex_lock(&args->ctx->lock);
     s = args->ctx->s;
@@ -410,13 +402,13 @@ static void* ReadProcAsync(void* a)
     {
         int r;
 
-        r = read(s, args->buffer, args->bytes_to_read);
+        r = read(s, args->buffer, args->bytes);
 
         if(r < 0)
         {
             r = errno;
 
-            LOG_E("res=%d, socket() failed, errno=%d", args->ctx->self, r);
+            LOG_E("res=%d, read(%d) failed, errno=%d", args->ctx->self, s, r);
 
             /* send callback */
             pthread_mutex_lock(&args->ctx->lock);
@@ -443,20 +435,19 @@ static int32_t Read(PP_Resource tcp_socket,
     char* buffer, int32_t bytes_to_read,
     struct PP_CompletionCallback callback)
 {
-    pthread_t th;
-    ReadArgs_t* args;
+    Args_t* args;
     ppb_tcpsocket_private_t* ctx = (ppb_tcpsocket_private_t*)res_private(tcp_socket);
 
     pthread_mutex_lock(&ctx->lock);
-    args = (ReadArgs_t*)calloc(1, sizeof(ReadArgs_t));
+    args = (Args_t*)calloc(1, sizeof(Args_t));
     args->buffer = buffer;
-    args->bytes_to_read = bytes_to_read;
+    args->bytes = bytes_to_read;
     args->callback = callback;
     args->ctx = ctx;
     args->async = ++args->ctx->async;
     ctx->asyncs++;
-    pthread_create(&th, NULL, ReadProcAsync, args);
-    pthread_detach(th);
+    pthread_create(&args->th, NULL, ReadProcAsync, args);
+    pthread_detach(args->th);
     pthread_mutex_unlock(&ctx->lock);
 
     return PP_OK_COMPLETIONPENDING;
@@ -469,19 +460,10 @@ static int32_t Read(PP_Resource tcp_socket,
  * exceeds 1 megabyte, it will always perform a partial write.
  * Multiple outstanding write requests are not supported.
  */
-typedef struct WriteArgsDesc
-{
-    uint64_t async;
-    ppb_tcpsocket_private_t* ctx;
-    const char* buffer;
-    int32_t bytes_to_write;
-    struct PP_CompletionCallback callback;
-} WriteArgs_t;
-
 static void* WriteProcAsync(void* a)
 {
     int s;
-    WriteArgs_t* args = (WriteArgs_t*)a;
+    Args_t* args = (Args_t*)a;
 
     pthread_mutex_lock(&args->ctx->lock);
     s = args->ctx->s;
@@ -499,13 +481,13 @@ static void* WriteProcAsync(void* a)
     {
         int r;
 
-        r = write(s, args->buffer, args->bytes_to_write);
+        r = write(s, args->buffer, args->bytes);
 
         if(r < 0)
         {
             r = errno;
 
-            LOG_E("res=%d, socket() failed, errno=%d", args->ctx->self, r);
+            LOG_E("res=%d, write(%d) failed, errno=%d", args->ctx->self, s, r);
 
             /* send callback */
             pthread_mutex_lock(&args->ctx->lock);
@@ -532,20 +514,19 @@ static int32_t Write(PP_Resource tcp_socket,
     const char* buffer, int32_t bytes_to_write,
     struct PP_CompletionCallback callback)
 {
-    pthread_t th;
-    WriteArgs_t* args;
+    Args_t* args;
     ppb_tcpsocket_private_t* ctx = (ppb_tcpsocket_private_t*)res_private(tcp_socket);
 
     pthread_mutex_lock(&ctx->lock);
-    args = (WriteArgs_t*)calloc(1, sizeof(ReadArgs_t));
-    args->buffer = buffer;
-    args->bytes_to_write = bytes_to_write;
+    args = (Args_t*)calloc(1, sizeof(Args_t));
+    args->buffer = (char*)buffer;
+    args->bytes = bytes_to_write;
     args->callback = callback;
     args->ctx = ctx;
     args->async = ++args->ctx->async;
     ctx->asyncs++;
-    pthread_create(&th, NULL, WriteProcAsync, args);
-    pthread_detach(th);
+    pthread_create(&args->th, NULL, WriteProcAsync, args);
+    pthread_detach(args->th);
     pthread_mutex_unlock(&ctx->lock);
 
     return PP_OK_COMPLETIONPENDING;
