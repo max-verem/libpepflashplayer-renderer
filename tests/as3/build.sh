@@ -18,3 +18,11 @@ mxmlc \
     -compiler.source-path=. \
     com/broadcastsolutionsdesign/libpepflashplayer_renderer/CtlProxy.as \
     -output ../src/CtlProxy.swf
+
+mxmlc \
+    -define+=NAMES::BuildDate,"\"$BUILD_DATE\"" \
+    -define+=NAMES::BuildHead,"\"$BUILD_HEAD\"" \
+    -omit-trace-statements=false -use-network=true \
+    -compiler.source-path=. \
+    com/broadcastsolutionsdesign/libpepflashplayer_renderer/DebugParams.as \
+    -output ../src/DebugParams.swf
