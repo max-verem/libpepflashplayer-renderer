@@ -74,6 +74,7 @@ static void Destructor(graphics_3d_t* graphics_3d)
 {
     int i;
     CUresult e;
+    CUcontext cu_ctx_pop;
 
     LOG_D("{%d}", graphics_3d->self);
 
@@ -94,9 +95,11 @@ static void Destructor(graphics_3d_t* graphics_3d)
 
     glDeleteBuffers(PBO_RING_LEN, graphics_3d->pbo);
 
+    if(CUDA_SUCCESS != (e = cuCtxPopCurrent(&cu_ctx_pop)))
+        LOG_E("cuCtxCreate failed: %s", getCudaDrvErrorString(e));
+
     if(CUDA_SUCCESS != (e = cuCtxDestroy(graphics_3d->cu_ctx)))
         LOG_E("cuCtxDestroy failed: %s", getCudaDrvErrorString(e));
-
 
     if(graphics_3d->ctx && graphics_3d->dpy)
         eglDestroyContext(graphics_3d->dpy, graphics_3d->ctx);
