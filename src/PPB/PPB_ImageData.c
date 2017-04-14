@@ -31,6 +31,7 @@ struct PPB_ImageData_1_0 PPB_ImageData_1_0_instance;
 static void Destructor(image_data_t* ctx)
 {
     LOG_D("{%d}", ctx->self);
+    free(ctx->buf);
 };
 
 static PP_Resource Create(PP_Instance instance, PP_ImageDataFormat format,
