@@ -18,7 +18,7 @@
 #include <pthread.h>
 #include "ticker.h"
 
-#define PBO_RING_LEN 2
+#define PBO_RING_LEN 1
 
 typedef struct graphics_3d_desc
 {
