@@ -66,7 +66,7 @@ int res_end()
     res_release(zero_fake_resource);
 
     LOG_N("------------------------ leaked resources ------------------");
-    for(c = 0, i = 0; i < active.size; i++)
+    for(c = 0, i = 0; i < active.count; i++)
         if(active.list[i])
         {
             LOG_N("res=%d, ref=%d, size=%d, priv=%p", i,
@@ -77,7 +77,7 @@ int res_end()
     LOG_N("------------------------ /leaked resources -----------------");
 
 
-    for(i = 0; i < active.size; i++)
+    for(i = 0; i < active.count; i++)
         if(active.list[i])
             res_destroy((PP_Resource)i);
 
@@ -189,11 +189,15 @@ static int res_destroy(PP_Resource res)
     active.list[res] = NULL;
     active.count--;
 
+    pthread_mutex_unlock(&lock);
+
     /* free resource */
     if(r->destructor)
         r->destructor(r->priv);
     free(r->priv);
     free(r);
+
+    pthread_mutex_lock(&lock);
 
     return 0;
 };
