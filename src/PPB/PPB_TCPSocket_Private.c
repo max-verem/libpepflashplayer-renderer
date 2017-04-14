@@ -61,6 +61,20 @@ static void ppb_tcpsocket_private_destructor(ppb_tcpsocket_private_t* ctx)
 {
     LOG_D("{%d}, ctx=%p, async=%d, asyncs=%d", ctx->self, ctx, (int)ctx->async, (int)ctx->asyncs);
 
+    pthread_mutex_lock(&ctx->lock);
+
+    while(ctx->asyncs)
+    {
+        LOG_D("{%d}, asyncs=%d", ctx->self, (int)ctx->asyncs);
+        pthread_mutex_unlock(&ctx->lock);
+        usleep(1000);
+        pthread_mutex_lock(&ctx->lock);
+    };
+
+    pthread_mutex_unlock(&ctx->lock);
+
+    LOG_D("{%d}, ctx=%p, async=%d, asyncs=%d", ctx->self, ctx, (int)ctx->async, (int)ctx->asyncs);
+
     /* destroy mutex */
     pthread_mutex_destroy(&ctx->lock);
 };
@@ -119,6 +133,7 @@ static void* ConnectProcAsync(void* a)
     int r;
     struct hostent *host_ip = NULL;
     Args_t* args = (Args_t*)a;
+
 
     /* resolv hostname */
     host_ip = gethostbyname(args->host);
@@ -214,7 +229,9 @@ static int32_t Connect(PP_Resource tcp_socket,
     Args_t* args;
     ppb_tcpsocket_private_t* ctx = (ppb_tcpsocket_private_t*)res_private(tcp_socket);
 
-    PPB_TCPSocket_Private_0_5_instance.Disconnect(tcp_socket);
+    LOG_N("res=%d, socket=%d", tcp_socket, ctx->s);
+
+//    PPB_TCPSocket_Private_0_5_instance.Disconnect(tcp_socket);
 
     pthread_mutex_lock(&ctx->lock);
     args = (Args_t*)calloc(1, sizeof(Args_t));
@@ -267,7 +284,7 @@ static PP_Bool GetLocalAddress(PP_Resource tcp_socket, struct PP_NetAddress_Priv
         }
         else
         {
-            LOG_N("local %s:%d\n", inet_ntoa(s.sin_addr), ntohs(s.sin_port));
+            LOG_N("local %s:%d", inet_ntoa(s.sin_addr), ntohs(s.sin_port));
 
             /* copy */
             addr->size = sizeof(s);
@@ -308,7 +325,7 @@ static PP_Bool GetRemoteAddress(PP_Resource tcp_socket, struct PP_NetAddress_Pri
         }
         else
         {
-            LOG_N("remote %s:%d\n", inet_ntoa(s.sin_addr), ntohs(s.sin_port));
+            LOG_N("remote %s:%d", inet_ntoa(s.sin_addr), ntohs(s.sin_port));
 
             /* copy */
             addr->size = sizeof(s);
@@ -386,6 +403,8 @@ static void* ReadProcAsync(void* a)
     int s;
     Args_t* args = (Args_t*)a;
 
+    LOG_N("ent");
+
     pthread_mutex_lock(&args->ctx->lock);
     s = args->ctx->s;
     pthread_mutex_unlock(&args->ctx->lock);
@@ -428,6 +447,8 @@ static void* ReadProcAsync(void* a)
 
     free(args);
 
+    LOG_N("ex");
+
     return NULL;
 };
 
@@ -437,6 +458,8 @@ static int32_t Read(PP_Resource tcp_socket,
 {
     Args_t* args;
     ppb_tcpsocket_private_t* ctx = (ppb_tcpsocket_private_t*)res_private(tcp_socket);
+
+    LOG_N("ent");
 
     pthread_mutex_lock(&ctx->lock);
     args = (Args_t*)calloc(1, sizeof(Args_t));
@@ -449,6 +472,8 @@ static int32_t Read(PP_Resource tcp_socket,
     pthread_create(&args->th, NULL, ReadProcAsync, args);
     pthread_detach(args->th);
     pthread_mutex_unlock(&ctx->lock);
+
+    LOG_N("ex");
 
     return PP_OK_COMPLETIONPENDING;
 };
@@ -543,6 +568,12 @@ static int32_t Write(PP_Resource tcp_socket,
 static void Disconnect(PP_Resource tcp_socket)
 {
     ppb_tcpsocket_private_t* ctx = (ppb_tcpsocket_private_t*)res_private(tcp_socket);
+
+    if(!ctx)
+    {
+        LOG_E("res=%d, ctx=NULL", tcp_socket);
+        return;
+    };
 
     pthread_mutex_lock(&ctx->lock);
     LOG_N("res=%d, socket=%d", tcp_socket, ctx->s);
