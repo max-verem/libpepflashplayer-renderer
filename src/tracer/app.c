@@ -11,6 +11,8 @@
 #include "ticker.h"
 #include "log.h"
 
+#define ASYNC_DO
+
 int app_run(app_t* app)
 {
     return 0;
@@ -73,6 +75,17 @@ static int app_buffer_swap_end(app_t* app, void** pbuf)
 
         if(CUDA_SUCCESS != (e = cuCtxPushCurrent(app->cu_ctx)))
             LOG_E("cuCtxPushCurrent failed: %s", getCudaDrvErrorString(e));
+
+#ifdef ASYNC_DO
+        // wait for syncs
+        cudaStreamSynchronize(app->cu_streams[0]);
+        cudaStreamSynchronize(app->cu_streams[1]);
+
+        // notify
+        t2 = ticker_now();
+        LOG_T("cudaStreamSynchronize %d ns", (int)(t2 - t1));
+        t1 = t2;
+#endif
 
         // 0
         app_buffer_unref(&app->buf_dev, app->ops[0]);
@@ -144,13 +157,14 @@ static int app_buffer_swap_end(app_t* app, void** pbuf)
         NDIlib_send_send_video_async(app->m_p_ndi_send, &ndi_video_frame);
         app->ndi_sends++;
 
+#ifndef ASYNC_DO
         // wait for syncs
         cudaStreamSynchronize(app->cu_streams[0]);
         cudaStreamSynchronize(app->cu_streams[1]);
+#endif
 
         if(CUDA_SUCCESS != (e = cuCtxPopCurrent(&cu_ctx_pop)))
             LOG_E("cuCtxPopCurrent failed: %s", getCudaDrvErrorString(e));
-
         t2 = ticker_now();
 
         LOG_T("OPS [%3d%3d%3d%3d%3d%3d%3d] %d ns",
