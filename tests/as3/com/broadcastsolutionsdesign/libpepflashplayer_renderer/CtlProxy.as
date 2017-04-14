@@ -19,6 +19,7 @@ package com.broadcastsolutionsdesign.libpepflashplayer_renderer
 
     import com.broadcastsolutionsdesign.libpepflashplayer_renderer.Utils;
     import com.broadcastsolutionsdesign.libpepflashplayer_renderer.URLLoader2;
+    import com.broadcastsolutionsdesign.libpepflashplayer_renderer.CtlLayer;
 
     [SWF(frameRate=50)]
 
@@ -32,12 +33,18 @@ package com.broadcastsolutionsdesign.libpepflashplayer_renderer
         private var connect_timeout:String = "10";
         private var socket_buffer:String = "";
         private var socket:Socket = new Socket();
+        private var layers_count:int = 16;
+        private var layers:Array;
 
         private function socket_connect(delay:int):void
         {
-            var t:Timer = new Timer(delay, 1);
-            t.addEventListener(TimerEvent.TIMER, function(e:TimerEvent):void
+            log("socket_connect: starting");
+            var t:Timer = new Timer(delay, 2);
+            t.addEventListener(TimerEvent.TIMER_COMPLETE/*TIMER*/, function(e:TimerEvent):void
             {
+                log("socket_connect: connecting");
+                if(socket.connected)
+                    socket.close();
                 socket.connect(connect_host, parseInt(connect_port));
             });
             t.start();
@@ -45,12 +52,33 @@ package com.broadcastsolutionsdesign.libpepflashplayer_renderer
 
         public function CtlProxy()
         {
+            var i:int;
+
             log("CtlProxy: built on [" + buildDate + "] from git head [" + buildHead + "]");
             log("CtlProxy: Flash version=" + Capabilities.version + " isDebugger=" + Capabilities.isDebugger);
 
             super();
 
+            Security.allowDomain(connect_host);
+            Security.allowInsecureDomain(connect_host);
+            Security.loadPolicyFile("http://" + connect_host + "/socket.xml");
+
             processParameters();
+
+            /* init layers */
+            layers = new Array(layers_count);
+            for(i = 0; i < 16; i++)
+            {
+                var mov:CtlLayer = new CtlLayer();
+
+                layers[i] = mov;
+
+                addChild(mov);
+            };
+//            addEventListener(Event.ENTER_FRAME, function(e:Event):void
+//            {
+//                log("CtlProxy: ENTER_FRAME");
+//            });
 
             stage.align = StageAlign.TOP_LEFT;
             stage.scaleMode = StageScaleMode.NO_SCALE;
@@ -62,6 +90,7 @@ package com.broadcastsolutionsdesign.libpepflashplayer_renderer
             socket.addEventListener(ProgressEvent.SOCKET_DATA, onSocketResponse);
             socket.addEventListener(SecurityErrorEvent.SECURITY_ERROR, onSocketSecError);
             socket.timeout = parseInt(connect_timeout);
+
             socket_connect(0);
         }
 
@@ -72,7 +101,7 @@ package com.broadcastsolutionsdesign.libpepflashplayer_renderer
         private function onSocketClose(e:Event):void
         {
             log("onSocketClose: here");
-            socket_connect(1000);
+//            socket_connect(5000);
         }
         private function onSocketError(e:IOErrorEvent):void
         {
@@ -82,13 +111,13 @@ package com.broadcastsolutionsdesign.libpepflashplayer_renderer
         private function onSocketSecError(e:SecurityErrorEvent):void
         {
             log("onSocketSecError: " + e);
-            socket_connect(1000);
+//            socket_connect(1000);
         }
         private function onSocketResponse(e:ProgressEvent):void
         {
             var socket:Socket = e.target as Socket;
 
-            log("onSocketSecError: enter");
+            log("onSocketResponse: enter");
 
             while(socket.bytesAvailable)
             {
@@ -113,13 +142,77 @@ package com.broadcastsolutionsdesign.libpepflashplayer_renderer
                     socket_buffer = socket_buffer.substr(t + 1);
 
                     log("onSocketResponse: cmd=[" + cmd + "]");
+                    cmd = exec_cmd(cmd);
 
-                    socket.writeUTFBytes("{" + cmd + "}:");
+                    socket.writeUTFBytes(cmd + ":");
                     socket.flush();
                 }
             }
         }
 
+        private function exec_cmd(body:String):String
+        {
+            var t:int;
+            var r:String, cmd:String;
+
+            t = body.indexOf(" ");
+
+            if(t < 0)
+                return "notparsable(exec_cmd)";
+
+            cmd = body.substr(0, t);
+
+            if(cmd == "LayerLoad")
+                r = exec_LayerLoad(body.substr(t + 1));
+            else if(cmd == "Cut")
+                r = exec_Cut(body.substr(t + 1));
+            else
+                r = "notimplemented(exec_cmd)";
+
+//            stage.invalidate();
+
+            return r;
+        }
+
+        private function exec_Cut(body:String):String
+        {
+            var t:int, idx:int, cut:int;
+            var movie:String;
+
+            t = body.indexOf(" ");
+
+            if(t < 0)
+                return "notparsable(exec_Cut)";
+
+            idx = parseInt(body.substr(0, t));
+            cut = parseInt(body.substr(t + 1));
+
+            log("exec_Cut: idx=[" + idx + "], cut=[" + cut + "]");
+
+            layers[idx].Cut(cut);
+
+            return "OK(exec_Cut)";
+        }
+
+        private function exec_LayerLoad(body:String):String
+        {
+            var t:int, idx:int;
+            var movie:String;
+
+            t = body.indexOf(" ");
+
+            if(t < 0)
+                return "notparsable(exec_LayerLoad)";
+
+            idx = parseInt(body.substr(0, t));
+            movie = body.substr(t + 1);
+
+            log("exec_LayerLoad: idx=[" + idx + "], movie=[" + movie + "]");
+
+            layers[idx].Load(movie);
+
+            return "OK(exec_LayerLoad)";
+        }
 
         private function onStageResize(event: Event = null): void
         {
