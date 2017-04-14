@@ -18,22 +18,15 @@
 #include "PPB_Var.h"
 #include "PPB.h"
 
-#define SWF_ARGS "line1=foo_url1&line2=bar_url2&line3=foo_url3&line4=bar_url4&param1=DEMO1%20LONG%20String"
 #define SWF_PATH "file:///usr/local/src/libpepflashplayer-renderer.git/tests/src"
 
-//#define SWF_NAME "m1-lowerThird-1080i50.swf"
-//#define SWF_NAME "as3_test4.swf"
-#define SWF_NAME "CtlProxy.swf"
+/*
+#define SWF_ARGS "line0=This%20String%20in%20File%20[" __FILE__ "]%20"
+#define SWF_NAME "titleSD_full_screen.swf"
+*/
 
-//#define SWF_NAME "1080i50-blank_test_GPU.swf"
-//#define SWF_NAME "m1_logo_1080i50_BIG.swf"
-//#define SWF_NAME "m1_logo_1080i50.swf"
-//#define SWF_NAME "demo4.swf"
-//#define SWF_NAME "demo1_2_movie.swf"
-//#define SWF_NAME "demo1_2_image.swf"
-//#define SWF_NAME "demo2.swf"
-//#define SWF_NAME "transparent_CG_100_percents_coverage_v2_01.swf"
-//#define SWF_NAME "transparent_CG_100_bars.swf"
+#define SWF_ARGS ""
+#define SWF_NAME "CtlProxy.swf"
 
 //const char* so_name = "/usr/local/src/libpepflashplayer-renderer.git/tests/libpepflashplayer.so-24.0.0.186-debug";
 const char* so_name = "/usr/local/src/libpepflashplayer-renderer.git/tests/libpepflashplayer.so-25.0.0.143-debug";
@@ -171,6 +164,7 @@ LOG_N("demo sleep1....");
 sleep(1);
 LOG_N("\n\n\n\n\n\n\n....sleeping done");
 
+#if 0
 LOG_N("will try to call dumb method");
         {
             struct PP_Var result, ex, method;
@@ -198,6 +192,7 @@ LOG_N("will try to call dumb method");
             PPB_Var_Release(argv[1]);
             PPB_Var_Release(result);
         };
+#endif
 
 LOG_N("will run reader thread");
         app_run(app_data);
@@ -215,10 +210,11 @@ LOG_N("Exiting...");
 LOG_N("will STOP reader thread");
         app_stop(app_data);
 
-        PPB_Var_Release(inst->private_instance_object);
-        PPB_Var_Release(inst->window_instance_object);
 LOG_PL;
         mod->interface.instance->DidDestroy(inst->instance_id);
+
+        PPB_Var_Release(inst->private_instance_object);
+        PPB_Var_Release(inst->window_instance_object);
 LOG_PL;
         res_release(inst->message_loop_id);
 LOG_PL;
